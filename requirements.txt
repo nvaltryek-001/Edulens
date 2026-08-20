@@ -1,0 +1,12 @@
+flask==3.0.0
+werkzeug==3.0.1
+opencv-python-headless==4.8.1.78
+mediapipe==0.10.30
+insightface==0.7.3
+numpy==1.26.4
+pandas==3.0.2
+scikit-learn==1.8.0
+Pillow==12.0.0
+PyJWT==2.8.0
+Flask-Cors==4.0.0
+firebase-admin==6.4.0

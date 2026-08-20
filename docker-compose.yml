@@ -1,0 +1,18 @@
+version: '3.8'
+
+services:
+  backend:
+    build: .
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./backend/dataset:/app/dataset
+      - ./backend/uploads:/app/uploads
+      - edulens_db:/app
+    environment:
+      - JWT_SECRET=${JWT_SECRET}
+      - FLASK_ENV=production
+      - FIREBASE_CREDENTIALS=${FIREBASE_CREDENTIALS:-backend/config/firebase-service-account.json}
+
+volumes:
+  edulens_db:
