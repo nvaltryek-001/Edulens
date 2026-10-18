@@ -95,3 +95,21 @@ structure.txt
 # ============================================================
 .DS_Store
 Thumbs.db
+# Local Python environments
+.venv/
+.venv*/
+venv/
+venv*/
+backend/.venv/
+backend/.venv*/
+backend/venv/
+backend/venv*/
+
+# Secrets and local data
+.env
+.env.*
+!.env.example
+backend/config/firebase-service-account.json
+*.db
+*.sqlite
+*.sqlite3
