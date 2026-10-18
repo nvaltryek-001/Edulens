@@ -1,4 +1,4 @@
-﻿package com.example.api
+package com.example.api
 
 import com.squareup.moshi.Moshi
 import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
@@ -15,7 +15,7 @@ object ApiClient {
     // ============================================================
 
     
-private const val BASE_URL = "http://127.0.0.1:5000/"
+private const val BASE_URL = ""
     // ============================================================
     // MOSHI
     // ============================================================

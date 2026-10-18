@@ -4,7 +4,12 @@ from functools import wraps
 from flask import request, jsonify
 import os
 
-JWT_SECRET = os.environ.get('JWT_SECRET', 'local_dev_secret_key')
+APP_ENV = os.environ.get('APP_ENV', 'development').lower()
+JWT_SECRET = os.environ.get('JWT_SECRET')
+if not JWT_SECRET:
+    if APP_ENV == 'production':
+        raise RuntimeError('JWT_SECRET must be configured in production')
+    JWT_SECRET = 'local_dev_secret_key'
 
 def generate_token(username, role):
     payload = {
@@ -29,7 +34,7 @@ def token_required(f):
         try:
             data = jwt.decode(token, JWT_SECRET, algorithms=['HS256'])
             current_user = {'username': data['username'], 'role': data['role']}
-        except:
+        except (jwt.PyJWTError, KeyError, TypeError, ValueError):
             return jsonify({'message': 'Token is invalid!'}), 401
             
         return f(current_user, *args, **kwargs)

@@ -73,24 +73,8 @@ def login():
         conn.close()
 
     if not user:
-
-        if (
-            data['username'] == 'admin'
-            and data['password'] == 'admin'
-        ):
-
-            token = generate_token(
-                'admin',
-                'administrator'
-            )
-
-            return jsonify({
-                'token': token,
-                'role': 'administrator'
-            })
-
         return jsonify({
-            'message': 'User not found'
+            'message': 'Invalid username or password'
         }), 401
 
     if check_password_hash(
@@ -119,71 +103,12 @@ def login():
 
 @app.route('/register', methods=['POST'])
 def register():
-
-    data = request.json or {}
-
-    if not data.get('username'):
-        return jsonify({
-            'success': False,
-            'message': 'Username is required'
-        }), 400
-
-    if not data.get('password'):
-        return jsonify({
-            'success': False,
-            'message': 'Password is required'
-        }), 400
-
-    if not data.get('role'):
-        return jsonify({
-            'success': False,
-            'message': 'Role is required'
-        }), 400
-
-    hashed_password = generate_password_hash(
-        data['password'],
-        method='pbkdf2:sha256'
-    )
-
-    conn = get_db_connection()
-
-    try:
-
-        conn.execute(
-            '''
-            INSERT INTO users
-            (
-                username,
-                password_hash,
-                role
-            )
-            VALUES (?, ?, ?)
-            ''',
-            (
-                data['username'],
-                hashed_password,
-                data['role']
-            )
-        )
-
-        conn.commit()
-
-    except Exception as e:
-
-        return jsonify({
-            'message': 'Registration failed',
-            'error': str(e)
-        }), 400
-
-    finally:
-
-        conn.close()
-
+    # Public registration is disabled. Accounts must be provisioned
+    # through a trusted administrator-controlled process.
     return jsonify({
-        'success': True,
-        'message': 'Registered successfully'
-    })
-
+        'success': False,
+        'message': 'Public registration is disabled. Contact your administrator.'
+    }), 403
 
 # ============================================================
 # A6 — USER PROFILE
@@ -210,18 +135,6 @@ def get_profile(current_user):
             ''',
             (username,)
         ).fetchone()
-
-        if not user and username == 'admin':
-
-            return jsonify({
-                'success': True,
-                'profile': {
-                    'userId': 'admin',
-                    'username': 'admin',
-                    'role': 'administrator',
-                    'status': 'Active'
-                }
-            })
 
         if not user:
 
@@ -2873,9 +2786,9 @@ def send_notification(current_user):
 # ============================================================
 
 if __name__ == '__main__':
-
+    import os
     app.run(
         host='0.0.0.0',
-        port=5000,
-        debug=True
+        port=int(os.environ.get('PORT', '5000')),
+        debug=False
     )

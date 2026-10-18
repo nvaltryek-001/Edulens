@@ -1,7 +1,10 @@
 import sqlite3
 import os
 
-DB_PATH = 'edulens.db'
+DB_PATH = os.environ.get(
+    'EDULENS_DB_PATH',
+    os.path.join(os.path.dirname(os.path.abspath(__file__)), 'edulens.db')
+)
 
 
 def get_db_connection():
