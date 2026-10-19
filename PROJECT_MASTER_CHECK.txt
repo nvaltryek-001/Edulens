@@ -1,0 +1,153 @@
+﻿**********************
+Windows PowerShell transcript start
+Start time: 20261018162850
+Username: NIKESH_001\nikes
+RunAs User: NIKESH_001\nikes
+Configuration Name: 
+Machine: NIKESH_001 (Microsoft Windows NT 10.0.26200.0)
+Host Application: C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe
+Process ID: 25048
+PSVersion: 5.1.26100.9711
+PSEdition: Desktop
+PSCompatibleVersions: 1.0, 2.0, 3.0, 4.0, 5.0, 5.1.26100.9711
+BuildVersion: 10.0.26100.9711
+CLRVersion: 4.0.30319.42000
+WSManStackVersion: 3.0
+PSRemotingProtocolVersion: 2.3
+SerializationVersion: 1.1.0.1
+**********************
+PS N:\edulens\SVIT_Smart_Attendance_App> Write-Host "`n========== 1. PROJECT & GUIDES ==========" -ForegroundColor Cyan
+
+========== 1. PROJECT & GUIDES ==========
+PS N:\edulens\SVIT_Smart_Attendance_App> $GuideDir = Join-Path $Root "docs\SVIT_Smart_Attendance_Project_Guides"
+PS N:\edulens\SVIT_Smart_Attendance_App> $GuideNames = @(
+ "01_PROJECT_MASTER_PLAN.md","02_ARCHITECTURE.md",
+ "03_DATABASE_DESIGN.md","04_AUTHENTICATION_RBAC.md",
+ "05_FACE_ENROLLMENT_AI.md","06_FOUR_PHOTO_ATTENDANCE.md",
+ "07_REPORTS_NOTIFICATIONS.md","08_UI_UX_DESIGN.md",
+ "09_TESTING_SECURITY_DEPLOYMENT.md","10_README.md",
+ "APK_FIRST_DELIVERY.md"
+)
+PS N:\edulens\SVIT_Smart_Attendance_App> foreach ($g in $GuideNames) {
+    $p = Join-Path $GuideDir $g
+    if (Test-Path $p) { Write-Host "[FOUND] $g" -ForegroundColor Green }
+    else { Write-Host "[MISSING] $g" -ForegroundColor Red }
+}
+[FOUND] 01_PROJECT_MASTER_PLAN.md
+[FOUND] 02_ARCHITECTURE.md
+[FOUND] 03_DATABASE_DESIGN.md
+[FOUND] 04_AUTHENTICATION_RBAC.md
+[FOUND] 05_FACE_ENROLLMENT_AI.md
+[FOUND] 06_FOUR_PHOTO_ATTENDANCE.md
+[FOUND] 07_REPORTS_NOTIFICATIONS.md
+[FOUND] 08_UI_UX_DESIGN.md
+[FOUND] 09_TESTING_SECURITY_DEPLOYMENT.md
+[FOUND] 10_README.md
+[FOUND] APK_FIRST_DELIVERY.md
+PS N:\edulens\SVIT_Smart_Attendance_App> Write-Host "`n========== 2. LOGIN & SERVER CONFIG ==========" -ForegroundColor Cyan
+
+========== 2. LOGIN & SERVER CONFIG ==========
+PS N:\edulens\SVIT_Smart_Attendance_App> $ApiFile = Join-Path $Root "app\src\main\java\com\example\api\ApiClient.kt"
+PS N:\edulens\SVIT_Smart_Attendance_App> $LoginFile = Join-Path $Root "app\src\main\java\com\example\ui\screens\LoginScreen.kt"
+PS N:\edulens\SVIT_Smart_Attendance_App> $BackendFile = Join-Path $Root "backend\app.py"
+PS N:\edulens\SVIT_Smart_Attendance_App> foreach ($f in @($ApiFile,$LoginFile,$BackendFile)) {
+    if (Test-Path $f) {
+        Write-Host "`n--- $f ---"
+        Select-String -Path $f -Pattern `
+          'BASE_URL|127\.0\.0\.1|localhost|https://|@app\.route|def login|def register|Google|Firebase|OutlinedTextField|Button\('
+    } else {
+        Write-Host "[MISSING] $f" -ForegroundColor Red
+    }
+}
+
+--- N:\edulens\SVIT_Smart_Attendance_App\app\src\main\java\com\example\api\ApiClient.kt ---
+
+app\src\main\java\com\example\api\ApiClient.kt:18:private const val BASE_URL = "http://127.0.0.1:5000/"
+app\src\main\java\com\example\api\ApiClient.kt:53:            .baseUrl(BASE_URL)
+
+--- N:\edulens\SVIT_Smart_Attendance_App\app\src\main\java\com\example\ui\screens\LoginScreen.kt ---
+app\src\main\java\com\example\ui\screens\LoginScreen.kt:21:import androidx.compose.material3.OutlinedTextField
+app\src\main\java\com\example\ui\screens\LoginScreen.kt:103:                OutlinedTextField(
+app\src\main\java\com\example\ui\screens\LoginScreen.kt:128:                OutlinedTextField(
+app\src\main\java\com\example\ui\screens\LoginScreen.kt:164:                Button(
+
+--- N:\edulens\SVIT_Smart_Attendance_App\backend\app.py ---
+backend\app.py:44:@app.route('/login', methods=['POST'])
+backend\app.py:45:def login():
+backend\app.py:120:@app.route('/register', methods=['POST'])
+backend\app.py:121:def register():
+backend\app.py:192:@app.route('/api/profile', methods=['GET'])
+backend\app.py:259:@app.route('/api/students', methods=['POST'])
+backend\app.py:325:@app.route('/api/enroll', methods=['POST'])
+backend\app.py:630:@app.route('/api/train', methods=['POST'])
+backend\app.py:674:@app.route('/api/recognize', methods=['POST'])
+backend\app.py:1022:@app.route('/health', methods=['GET'])
+backend\app.py:1035:@app.route('/api/attendance', methods=['GET'])
+backend\app.py:1086:@app.route('/api/weekly-summary', methods=['GET'])
+backend\app.py:1300:@app.route('/api/sessions/start', methods=['POST'])
+backend\app.py:1523:@app.route('/api/sessions/end', methods=['POST'])
+backend\app.py:1675:@app.route('/api/sessions', methods=['GET'])
+backend\app.py:1772:@app.route('/api/sync', methods=['POST'])
+backend\app.py:1885:@app.route('/api/reports', methods=['GET'])
+backend\app.py:2089:@app.route('/api/analytics', methods=['GET'])
+backend\app.py:2514:@app.route('/api/low-attendance', methods=['GET'])
+backend\app.py:2783:@app.route('/api/notifications', methods=['POST'])
+backend\app.py:2847:                    'Firebase notification service '
+
+
+PS N:\edulens\SVIT_Smart_Attendance_App> Write-Host "`n========== 3. LOCAL BACKEND ==========" -ForegroundColor Cyan
+
+========== 3. LOCAL BACKEND ==========
+PS N:\edulens\SVIT_Smart_Attendance_App> try {
+    Invoke-RestMethod "http://127.0.0.1:5000/health" -TimeoutSec 5 |
+        ConvertTo-Json
+} catch {
+    Write-Host "LOCAL BACKEND UNREACHABLE: $($_.Exception.Message)" -ForegroundColor Red
+}
+{
+    "message":  "EduLens Backend is running",
+    "status":  "healthy"
+}
+PS N:\edulens\SVIT_Smart_Attendance_App> Write-Host "`n========== 4. PUBLIC BACKEND URL ==========" -ForegroundColor Cyan
+
+========== 4. PUBLIC BACKEND URL ==========
+PS N:\edulens\SVIT_Smart_Attendance_App> Write-Host "The APK must use a deployed HTTPS URL for no-USB access."
+The APK must use a deployed HTTPS URL for no-USB access.
+PS N:\edulens\SVIT_Smart_Attendance_App> Write-Host "A localhost health check does not prove public deployment."
+A localhost health check does not prove public deployment.
+PS N:\edulens\SVIT_Smart_Attendance_App> Write-Host "`n========== 5. ANDROID BUILD ==========" -ForegroundColor Cyan
+
+========== 5. ANDROID BUILD ==========
+PS N:\edulens\SVIT_Smart_Attendance_App> $Gradle = Join-Path $Root "gradlew.bat"
+PS N:\edulens\SVIT_Smart_Attendance_App> if (Test-Path $Gradle) {
+    & $Gradle assembleDebug
+    Write-Host "ASSEMBLE EXIT CODE: $LASTEXITCODE"
+    if ($LASTEXITCODE -eq 0) {
+        $Apk = Join-Path $Root "app\build\outputs\apk\debug\app-debug.apk"
+        if (Test-Path $Apk) {
+            Get-Item $Apk | Select-Object FullName,Length,LastWriteTime
+        }
+    }
+
+    Write-Host "`n========== 6. AUTOMATED TESTS ==========" -ForegroundColor Cyan
+    & $Gradle testDebugUnitTest
+    Write-Host "TEST EXIT CODE: $LASTEXITCODE"
+} else {
+    Write-Host "gradlew.bat missing" -ForegroundColor Red
+}
+
+ASSEMBLE EXIT CODE: 1
+
+========== 6. AUTOMATED TESTS ==========
+
+TEST EXIT CODE: 1
+PS N:\edulens\SVIT_Smart_Attendance_App> Write-Host "`n========== 7. GIT STATUS ==========" -ForegroundColor Cyan
+
+========== 7. GIT STATUS ==========
+PS N:\edulens\SVIT_Smart_Attendance_App> git status --short
+
+PS N:\edulens\SVIT_Smart_Attendance_App> Stop-Transcript | Out-Null
+**********************
+Windows PowerShell transcript end
+End time: 20261018162851
+**********************

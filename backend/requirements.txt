@@ -9,3 +9,6 @@ Pillow==10.1.0
 PyJWT==2.8.0
 Flask-Cors==4.0.0
 firebase-admin==6.4.0
+insightface==0.7.3
+onnxruntime==1.18.1
+gunicorn==23.0.0

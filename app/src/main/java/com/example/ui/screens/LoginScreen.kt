@@ -1,4 +1,4 @@
-package com.example.ui.screens
+﻿package com.example.ui.screens
 
 import android.content.Context
 import androidx.compose.foundation.Image
@@ -72,9 +72,9 @@ fun LoginScreen(
 
                 Image(
                     painter = painterResource(
-                        id = R.drawable.img_app_icon_1785561902101
+                        id = R.drawable.svit_logo
                     ),
-                    contentDescription = "EduLens Logo",
+                    contentDescription = "SVIT College Logo",
                     modifier = Modifier.size(120.dp),
                     contentScale = ContentScale.Fit
                 )
@@ -84,14 +84,14 @@ fun LoginScreen(
                 )
 
                 Text(
-                    text = "EduLens",
-                    style = MaterialTheme.typography.displaySmall,
+                    text = "SVIT Smart Attendance",
+                    style = MaterialTheme.typography.headlineMedium,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.primary
                 )
 
                 Text(
-                    text = "Secure Attendance System",
+                    text = "Sai Vidya Institute of Technology",
                     style = MaterialTheme.typography.titleMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )

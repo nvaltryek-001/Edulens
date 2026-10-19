@@ -1,0 +1,1134 @@
+﻿**********************
+Windows PowerShell transcript start
+Start time: 20261018161715
+Username: NIKESH_001\nikes
+RunAs User: NIKESH_001\nikes
+Configuration Name: 
+Machine: NIKESH_001 (Microsoft Windows NT 10.0.26200.0)
+Host Application: C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe
+Process ID: 25048
+PSVersion: 5.1.26100.9711
+PSEdition: Desktop
+PSCompatibleVersions: 1.0, 2.0, 3.0, 4.0, 5.0, 5.1.26100.9711
+BuildVersion: 10.0.26100.9711
+CLRVersion: 4.0.30319.42000
+WSManStackVersion: 3.0
+PSRemotingProtocolVersion: 2.3
+SerializationVersion: 1.1.0.1
+**********************
+PS N:\edulens\SVIT_Smart_Attendance_App> Write-Host "`n========== 1. PROJECT AND GIT STATUS ==========" -ForegroundColor Cyan
+
+========== 1. PROJECT AND GIT STATUS ==========
+PS N:\edulens\SVIT_Smart_Attendance_App> Write-Host "Project: $Root"
+Project: N:\edulens\SVIT_Smart_Attendance_App
+PS N:\edulens\SVIT_Smart_Attendance_App> git status --short --branch
+ M .env.example
+ M app/src/main/java/com/example/api/ApiClient.kt
+ M app/src/main/java/com/example/ui/EduLensApp.kt
+ M app/src/main/java/com/example/ui/screens/LoginScreen.kt
+ M app/src/test/java/com/example/GreetingScreenshotTest.kt
+?? SVIT_DIAGNOSTIC_REPORT.txt
+?? SVIT_FAST_VALIDATION_20261018-151135.txt
+?? _safety_backup/
+?? app/src/main/res/drawable-nodpi/
+?? backend/.venv311/
+?? docs/
+PS N:\edulens\SVIT_Smart_Attendance_App> git log -1 --oneline
+
+PS N:\edulens\SVIT_Smart_Attendance_App> Write-Host "`n========== 2. PROJECT GUIDES ==========" -ForegroundColor Cyan
+
+========== 2. PROJECT GUIDES ==========
+PS N:\edulens\SVIT_Smart_Attendance_App> $GuideDir = Join-Path $Root "docs\SVIT_Smart_Attendance_Project_Guides"
+PS N:\edulens\SVIT_Smart_Attendance_App> if (Test-Path $GuideDir) {
+    Get-ChildItem $GuideDir -File |
+        Select-Object Name, Length, LastWriteTime |
+        Format-Table -AutoSize
+} else {
+    Write-Host "Guide directory not found at expected path."
+}
+
+Name                              Length LastWriteTime
+----                              ------ -------------
+01_PROJECT_MASTER_PLAN.md           2484 10/18/2026 2:12:33 PM
+02_ARCHITECTURE.md                  1818 10/18/2026 2:12:33 PM
+03_DATABASE_DESIGN.md               1885 10/18/2026 2:12:33 PM
+04_AUTHENTICATION_RBAC.md           1461 10/18/2026 2:12:33 PM
+05_FACE_ENROLLMENT_AI.md            1363 10/18/2026 2:12:33 PM
+06_FOUR_PHOTO_ATTENDANCE.md         1270 10/18/2026 2:12:33 PM
+07_REPORTS_NOTIFICATIONS.md         1264 10/18/2026 2:12:33 PM
+08_UI_UX_DESIGN.md                  1576 10/18/2026 2:12:33 PM
+09_TESTING_SECURITY_DEPLOYMENT.md   1636 10/18/2026 2:12:33 PM
+10_README.md                        3185 10/18/2026 2:12:33 PM
+APK_FIRST_DELIVERY.md               1648 10/18/2026 2:12:33 PM
+
+
+PS N:\edulens\SVIT_Smart_Attendance_App> Write-Host "`n========== 3. ANDROID DEVICE ==========" -ForegroundColor Cyan
+
+========== 3. ANDROID DEVICE ==========
+PS N:\edulens\SVIT_Smart_Attendance_App> & $Adb devices
+
+PS N:\edulens\SVIT_Smart_Attendance_App> & $Adb reverse --list
+
+PS N:\edulens\SVIT_Smart_Attendance_App> & $Adb shell dumpsys package $Package |
+    Select-String "versionName=|versionCode=|firstInstallTime|lastUpdateTime"
+
+    versionCode=1 minSdk=24 targetSdk=35
+    versionName=1.0
+    lastUpdateTime=2026-10-18 16:09:48
+      firstInstallTime=2026-10-18 13:50:50
+      firstInstallTime=1970-01-01 05:30:00
+      firstInstallTime=1970-01-01 05:30:00
+
+
+PS N:\edulens\SVIT_Smart_Attendance_App> Write-Host "`n========== 4. CURRENT ANDROID SCREEN ==========" -ForegroundColor Cyan
+
+========== 4. CURRENT ANDROID SCREEN ==========
+PS N:\edulens\SVIT_Smart_Attendance_App> & $Adb shell dumpsys activity activities |
+    Select-String "mResumedActivity|topResumedActivity|ActivityRecord" |
+    Select-Object -Last 12
+
+        * ActivityRecord{25697f1 u0 com.aistudio.edulens.vqrznx/com.example.MainActivity} t10919}
+        * ActivityRecord{bd9e2c7 u0 com.google.android.youtube/.app.honeycomb.Shell$HomeActivity} t10907}
+          * ActivityRecord{d627188 u0 com.mi.android.globallauncher/com.miui.home.launcher.Launcher} t2}
+        source=ActivityRecord{bd9e2c7 u0 com.google.android.youtube/.app.honeycomb.Shell$HomeActivity} t10907}
+SCREEN_ORIENTATION_UNSPECIFIED
+        source=ActivityRecord{bd9e2c7 u0 com.google.android.youtube/.app.honeycomb.Shell$HomeActivity} t10907}
+SCREEN_ORIENTATION_USER_PORTRAIT
+        source=ActivityRecord{bd9e2c7 u0 com.google.android.youtube/.app.honeycomb.Shell$HomeActivity} t10907}
+SCREEN_ORIENTATION_UNSPECIFIED
+        source=ActivityRecord{bd9e2c7 u0 com.google.android.youtube/.app.honeycomb.Shell$HomeActivity} t10907}
+SCREEN_ORIENTATION_USER_PORTRAIT
+        source=ActivityRecord{55bf28e u0 com.aistudio.edulens.vqrznx/com.example.MainActivity} t10918}
+SCREEN_ORIENTATION_UNSPECIFIED
+        source=ActivityRecord{55bf28e u0 com.aistudio.edulens.vqrznx/com.example.MainActivity} t10918}
+SCREEN_ORIENTATION_UNSPECIFIED
+        source=ActivityRecord{25697f1 u0 com.aistudio.edulens.vqrznx/com.example.MainActivity} t10919}
+SCREEN_ORIENTATION_UNSPECIFIED
+        source=ActivityRecord{25697f1 u0 com.aistudio.edulens.vqrznx/com.example.MainActivity} t10919}
+SCREEN_ORIENTATION_UNSPECIFIED
+  mNoHistoryActivities=[ActivityRecord{b6bda0a u0
+in.amazon.mShop.android.shopping/com.amazon.mShop.httpUrlDeepLink.DeepLinkingActivity} t-1 f}}]
+
+
+PS N:\edulens\SVIT_Smart_Attendance_App> Write-Host "`n========== 5. SERVER HEALTH ==========" -ForegroundColor Cyan
+
+========== 5. SERVER HEALTH ==========
+PS N:\edulens\SVIT_Smart_Attendance_App> try {
+    Invoke-RestMethod -Uri "http://127.0.0.1:5000/health" -TimeoutSec 5 |
+        ConvertTo-Json -Depth 5
+} catch {
+    Write-Host "Health check failed: $($_.Exception.Message)"
+    Write-Host "Confirm the Flask server terminal is still running."
+}
+{
+    "message":  "EduLens Backend is running",
+    "status":  "healthy"
+}
+PS N:\edulens\SVIT_Smart_Attendance_App> Write-Host "`n========== 6. API URL AND LOGIN IMPLEMENTATION ==========" -ForegroundColor Cyan
+
+========== 6. API URL AND LOGIN IMPLEMENTATION ==========
+PS N:\edulens\SVIT_Smart_Attendance_App> $Source = Join-Path $Root "app\src\main\java"
+PS N:\edulens\SVIT_Smart_Attendance_App> Get-ChildItem $Source -Recurse -File -Include *.kt |
+    Select-String -Pattern "BASE_URL|fun login|Unable to connect|ConnectException|ApiClient|login\(" |
+    Select-Object -First 100 Path, LineNumber, Line |
+    Format-List
+
+
+Path       : N:\edulens\SVIT_Smart_Attendance_App\app\src\main\java\com\example\api\ApiClient.kt
+LineNumber : 10
+Line       : object ApiClient {
+
+Path       : N:\edulens\SVIT_Smart_Attendance_App\app\src\main\java\com\example\api\ApiClient.kt
+LineNumber : 18
+Line       : private const val BASE_URL = "http://127.0.0.1:5000/"
+
+Path       : N:\edulens\SVIT_Smart_Attendance_App\app\src\main\java\com\example\api\ApiClient.kt
+LineNumber : 53
+Line       :             .baseUrl(BASE_URL)
+
+Path       : N:\edulens\SVIT_Smart_Attendance_App\app\src\main\java\com\example\api\FlaskApiService.kt
+LineNumber : 291
+Line       :     suspend fun login(
+
+Path       : N:\edulens\SVIT_Smart_Attendance_App\app\src\main\java\com\example\ui\screens\AttendanceViewModel.kt
+LineNumber : 7
+Line       : import com.example.api.ApiClient
+
+Path       : N:\edulens\SVIT_Smart_Attendance_App\app\src\main\java\com\example\ui\screens\AttendanceViewModel.kt
+LineNumber : 143
+Line       :                     ApiClient
+
+Path       : N:\edulens\SVIT_Smart_Attendance_App\app\src\main\java\com\example\ui\screens\AttendanceViewModel.kt
+LineNumber : 271
+Line       :                     ApiClient
+
+Path       : N:\edulens\SVIT_Smart_Attendance_App\app\src\main\java\com\example\ui\screens\AttendanceViewModel.kt
+LineNumber : 533
+Line       :                     ApiClient
+
+Path       : N:\edulens\SVIT_Smart_Attendance_App\app\src\main\java\com\example\ui\screens\DashboardScreen.kt
+LineNumber : 29
+Line       : import com.example.api.ApiClient
+
+Path       : N:\edulens\SVIT_Smart_Attendance_App\app\src\main\java\com\example\ui\screens\DashboardScreen.kt
+LineNumber : 195
+Line       :                     ApiClient
+
+Path       : N:\edulens\SVIT_Smart_Attendance_App\app\src\main\java\com\example\ui\screens\DashboardScreen.kt
+LineNumber : 249
+Line       :                     ApiClient
+
+Path       : N:\edulens\SVIT_Smart_Attendance_App\app\src\main\java\com\example\ui\screens\DashboardScreen.kt
+LineNumber : 303
+Line       :                         ApiClient
+
+Path       : N:\edulens\SVIT_Smart_Attendance_App\app\src\main\java\com\example\ui\screens\DashboardScreen.kt
+LineNumber : 365
+Line       :                     "Unable to connect to EduLens server."
+
+Path       : N:\edulens\SVIT_Smart_Attendance_App\app\src\main\java\com\example\ui\screens\DashboardScreen.kt
+LineNumber : 415
+Line       :                     ApiClient
+
+Path       : N:\edulens\SVIT_Smart_Attendance_App\app\src\main\java\com\example\ui\screens\DashboardScreen.kt
+LineNumber : 437
+Line       :                     "Unable to connect to profile service."
+
+Path       : N:\edulens\SVIT_Smart_Attendance_App\app\src\main\java\com\example\ui\screens\EnrollmentScreen.kt
+LineNumber : 25
+Line       : import com.example.api.ApiClient
+
+Path       : N:\edulens\SVIT_Smart_Attendance_App\app\src\main\java\com\example\ui\screens\EnrollmentScreen.kt
+LineNumber : 817
+Line       :                                     ApiClient
+
+Path       : N:\edulens\SVIT_Smart_Attendance_App\app\src\main\java\com\example\ui\screens\LoginScreen.kt
+LineNumber : 40
+Line       : import com.example.api.ApiClient
+
+Path       : N:\edulens\SVIT_Smart_Attendance_App\app\src\main\java\com\example\ui\screens\LoginScreen.kt
+LineNumber : 45
+Line       : fun LoginScreen(
+
+Path       : N:\edulens\SVIT_Smart_Attendance_App\app\src\main\java\com\example\ui\screens\LoginScreen.kt
+LineNumber : 186
+Line       :                                     ApiClient.flaskApiService.login(
+
+Path       : N:\edulens\SVIT_Smart_Attendance_App\app\src\main\java\com\example\ui\screens\LoginScreen.kt
+LineNumber : 243
+Line       :                                     "Unable to connect to EduLens server"
+
+Path       : N:\edulens\SVIT_Smart_Attendance_App\app\src\main\java\com\example\ui\screens\ReportsScreen.kt
+LineNumber : 49
+Line       : import com.example.api.ApiClient
+
+Path       : N:\edulens\SVIT_Smart_Attendance_App\app\src\main\java\com\example\ui\screens\ReportsScreen.kt
+LineNumber : 159
+Line       :                 ApiClient
+
+Path       : N:\edulens\SVIT_Smart_Attendance_App\app\src\main\java\com\example\ui\screens\ReportsScreen.kt
+LineNumber : 224
+Line       :                     ?: "Unable to connect to EduLens server."
+
+
+
+PS N:\edulens\SVIT_Smart_Attendance_App> Write-Host "`n========== 7. ANDROID MANIFEST ==========" -ForegroundColor Cyan
+
+========== 7. ANDROID MANIFEST ==========
+PS N:\edulens\SVIT_Smart_Attendance_App> Select-String -Path ".\app\src\main\AndroidManifest.xml" `
+    -Pattern "INTERNET|usesCleartextTraffic|MAIN|LAUNCHER|android:name"
+
+app\src\main\AndroidManifest.xml:9:    <uses-permission android:name="android.permission.INTERNET" />
+app\src\main\AndroidManifest.xml:11:    <uses-permission android:name="android.permission.CAMERA" />
+app\src\main\AndroidManifest.xml:14:        android:name="android.hardware.camera"
+app\src\main\AndroidManifest.xml:25:        android:icon="@mipmap/ic_launcher"
+app\src\main\AndroidManifest.xml:27:        android:roundIcon="@mipmap/ic_launcher_round"
+app\src\main\AndroidManifest.xml:29:        android:usesCleartextTraffic="true"
+app\src\main\AndroidManifest.xml:33:        <!-- MAIN ACTIVITY -->
+app\src\main\AndroidManifest.xml:37:            android:name=".MainActivity"
+app\src\main\AndroidManifest.xml:45:                    android:name="android.intent.action.MAIN" />
+app\src\main\AndroidManifest.xml:48:                    android:name="android.intent.category.LAUNCHER" />
+app\src\main\AndroidManifest.xml:59:            android:name="androidx.core.content.FileProvider"
+app\src\main\AndroidManifest.xml:65:                android:name="android.support.FILE_PROVIDER_PATHS"
+
+
+PS N:\edulens\SVIT_Smart_Attendance_App> Write-Host "`n========== 8. CAPTURE LOGIN ATTEMPT ==========" -ForegroundColor Cyan
+
+========== 8. CAPTURE LOGIN ATTEMPT ==========
+PS N:\edulens\SVIT_Smart_Attendance_App> Write-Host "Open the app on your phone now."
+Open the app on your phone now.
+PS N:\edulens\SVIT_Smart_Attendance_App> Write-Host "If the login screen appears, tap Login ONCE."
+If the login screen appears, tap Login ONCE.
+PS N:\edulens\SVIT_Smart_Attendance_App> Write-Host "If the login screen does NOT appear, do not guess; tell me what is visible."
+If the login screen does NOT appear, do not guess; tell me what is visible.
+PS N:\edulens\SVIT_Smart_Attendance_App> Read-Host "After checking the phone, press ENTER here to collect logs"
+7676673303
+PS N:\edulens\SVIT_Smart_Attendance_App> & $Adb logcat -d -t 5000 |
+    Select-String -Pattern "AndroidRuntime|FATAL EXCEPTION|Exception|ConnectException|ECONNREFUSED|CLEARTEXT|SocketTimeoutException|OkHttp|Retrofit|edulens|Process:" -Context 1,2 |
+    Select-Object -Last 150
+
+> 10-18 16:16:06.814 17493 17493 V GraphicsEnvironment: ANGLE Developer option for 'com.aistudio.edulens.vqrznx' set
+to: 'default'
+> 10-18 16:16:06.815 17493 17493 V GraphicsEnvironment: ANGLE GameManagerService for com.aistudio.edulens.vqrznx: false
+  10-18 16:16:06.815 17493 17493 V GraphicsEnvironment: App is not on the allowlist for updatable production driver.
+  10-18 16:16:06.824  1956  3123 D ForceDarkAppConfigProvider: cloudConfigVersion: -1   localConfigVersion:20240126
+> 10-18 16:16:06.824  1956  3123 I UiModeManager: systemserver package:com.aistudio.edulens.vqrznx null
+> 10-18 16:16:06.825 17493 17493 I ForceDarkHelperStubImpl: initialize for com.aistudio.edulens.vqrznx ,
+ForceDarkAppConfig: null
+  10-18 16:16:06.826 17493 17493 D nativeloader: Load libforcedarkimpl.so using system ns
+(caller=/system_ext/framework/miui-framework.jar): ok
+> 10-18 16:16:06.826 17493 17493 D .edulens.vqrznx: JNI_OnLoad success
+  10-18 16:16:06.826 17493 17493 I MiuiForceDarkConfig: setConfig density:2.750000, mainRule:0, secondaryRule:0,
+tertiaryRule:0
+  10-18 16:16:06.829 17493 17493 D NetworkSecurityConfig: No Network Security Config specified, using platform default
+  10-18 16:16:06.938 17493 17493 W libc    : Access denied finding property "ro.vendor.df.effect.conflict"
+> 10-18 16:16:06.934 17493 17493 W .edulens.vqrznx: type=1400 audit(0.0:5112564): avc: denied { read } for
+name="u:object_r:vendor_displayfeature_prop:s0" dev="tmpfs" ino=15364 scontext=u:r:untrusted_app:s0:c65,c257,c512,c768
+tcontext=u:object_r:vendor_displayfeature_prop:s0 tclass=file permissive=0 app=com.google.android.apps.nbu.paisa.user
+  10-18 16:16:06.948 17493 17493 D IS_CTS_MODE: false
+  10-18 16:16:06.948 17493 17493 D MULTI_WINDOW_ENABLED: false
+  10-18 16:16:07.046 17493 17493 D DecorView[]: updateDecorCaptionStatus windowMode is 1
+> 10-18 16:16:07.063  1956  3123 D CoreBackPreview: Window{a86006 u0
+com.aistudio.edulens.vqrznx/com.example.MainActivity}: Setting back callback
+OnBackInvokedCallbackInfo{mCallback=android.window.IOnBackInvokedCallback$Stub$Proxy@27b14f4, mPriority=0}
+> 10-18 16:16:07.064 17493 17493 W Looper  : PerfMonitor looperActivity :
+package=com.aistudio.edulens.vqrznx/com.example.MainActivity time=167ms latency=994ms  procState=-1  historyMsgCount=1
+(msgIndex=1 wall=1003ms seq=3 late=8ms h=android.app.ActivityThread$H w=110)
+> 10-18 16:16:07.065 17493 17493 W Looper  : PerfMonitor looperActivity :
+package=com.aistudio.edulens.vqrznx/com.example.MainActivity time=0ms latency=1160ms  procState=-1  historyMsgCount=2
+(msgIndex=1 wall=1003ms seq=3 late=8ms h=android.app.ActivityThread$H w=110)
+  10-18 16:16:07.065  3095  3095 D RecentsImpl: mActivityStateObserver com.example.MainActivity
+  10-18 16:16:07.067  3095  3095 W RecentsImpl: onResumed className=com.example.MainActivity   mIsInAnotherPro=false
+isKeyguardLocked=false   mSecuritySpaceGuideShown=false
+  10-18 16:16:07.511  1049  3572 D MI-SF   : [FpsStat] construct...
+> 10-18 16:16:07.527  1956  3123 D WindowManager: wms.Input focus has changed to Window{a86006 u0
+com.aistudio.edulens.vqrznx/com.example.MainActivity} display=0 updateInputWindows = true
+  10-18 16:16:07.527  1956  3123 I MultiSenceManagerInternalStub: getInstance
+  10-18 16:16:07.529  3095  3095 D TouchInteractionService: onSystemUiFlagsChanged, mSystemUiStateFlags=20000
+> 10-18 16:16:07.528  1956  2064 D WindowManager: wms.Update InputWindowHandle: a86006
+com.aistudio.edulens.vqrznx/com.example.MainActivity, frame=[0,0,0,0], touchableRegion=SkRegion((0,0,1080,2400)),
+scaleFactor=1.0, transform=null, windowToken=android.os.BinderProxy@7610ae1, isClone=false, visibal=true,
+focusable=true, changed=true
+> 10-18 16:16:07.536  1049  3572 I SurfaceFlinger: sf.setTransactionState focusRequest transactionId:8400961323328
+frontWin:a86006 com.aistudio.edulens.vqrznx/com.example.MainActivity
+  10-18 16:16:07.537 17493 17657 I AdrenoGLES-0: QUALCOMM build                   : 3e33337ce3, I07ee46fc66
+  10-18 16:16:07.537 17493 17657 I AdrenoGLES-0: Build Date                       : 10/08/21
+  10-18 16:16:07.539  1049  1049 I SurfaceFlinger: sf.transactionIsReadyToBeApplied focusRequest
+transactionId:8400961323328
+> 10-18 16:16:07.542  1049  1927 D SurfaceFlinger: updateInputFlinger::setFocusedWindow: windowName=a86006
+com.aistudio.edulens.vqrznx/com.example.MainActivity focusRequests.size=1
+  10-18 16:16:07.548 17493 17657 I AdrenoGLES-0: PFP: 0x016ee201, ME: 0x00000000
+  10-18 16:16:07.550 17493 17493 D VRI[MainActivity]: vri.reportNextDraw
+android.view.ViewRootImpl.performTraversals:4013 android.view.ViewRootImpl.doTraversal:2725
+android.view.ViewRootImpl$TraversalRunnable.run:9812 android.view.Choreographer$CallbackRecord.run:1505
+android.view.Choreographer$CallbackRecord.run:1513
+  10-18 16:16:07.579   555   555 I servicemanager: Could not find
+android.hardware.graphics.allocator.IAllocator/default in the VINTF manifest.
+> 10-18 16:16:07.595 17493 17657 D .edulens.vqrznx: MiuiProcessManagerServiceStub setSchedFifo
+  10-18 16:16:07.595 17493 17657 I MiuiProcessManagerImpl: setSchedFifo pid:17493, mode:3
+  10-18 16:16:07.596  1956  6321 D ProcessManager: beginSchedThreads is not Enabled
+  10-18 16:16:07.613 17493 17493 D VRI[MainActivity]: vri.reportDrawFinished syncSeqId=0
+android.view.ViewRootImpl.lambda$createSyncIfNeeded$4$android-view-ViewRootImpl:4081
+android.view.ViewRootImpl$$ExternalSyntheticLambda2.run:6 android.os.Handler.handleCallback:942
+android.os.Handler.dispatchMessage:99 android.os.Looper.loopOnce:211
+> 10-18 16:16:07.613  1956  6321 D WindowManager: wms.finishDrawingLocked: mDrawState=COMMIT_DRAW_PENDING
+Window{a86006 u0 com.aistudio.edulens.vqrznx/com.example.MainActivity} in
+Surface(name=com.aistudio.edulens.vqrznx/com.example.MainActivity)/@0x8e00e8c
+> 10-18 16:16:07.614  1956  6321 D MiuiFreeFormGesturePointerEventListener: finishDrawingWindow: topFullScreenWindow=
+Window{a86006 u0 com.aistudio.edulens.vqrznx/com.example.MainActivity}
+  10-18 16:16:07.620 17493 17533 I OpenGLRenderer: Davey! duration=725ms; Flags=1, FrameTimelineVsyncId=1360352241,
+IntendedVsync=1557114341379802, Vsync=1557114525160982, InputEventId=0, HandleInputStart=1557114526591475,
+AnimationStart=1557114526606058, PerformTraversalsStart=1557114526779652, DrawStart=1557115031673506,
+FrameDeadline=1557114353713135, FrameInterval=1557114526136266, FrameStartTime=8353690, SyncQueued=1557115049941318,
+SyncStart=1557115050672412, IssueDrawCommandsStart=1557115053636735, SwapBuffers=1557115064640641,
+FrameCompleted=1557115067129756, DequeueBufferDuration=2274844, QueueBufferDuration=337240,
+GpuCompleted=1557115065842985, SwapBuffersCompleted=1557115067129756, DisplayPresentTime=35192970783429,
+CommandSubmissionCompleted=1557115064640641,
+  10-18 16:16:07.627  1956  2064 D TaskSnapshot_Helper: shouldDelay()... Not launched by home, no delay needed.
+  10-18 16:16:07.630 17493 17493 W Looper  : PerfMonitor doFrame : time=2ms vsyncFrame=0 latency=503ms procState=-1
+historyMsgCount=6 (msgIndex=1 wall=545ms seq=8 late=184ms h=android.view.Choreographer$FrameHandler
+c=android.view.Choreographer$FrameDisplayEventReceiver)
+> 10-18 16:16:07.634  1956  2064 I WindowManager: wms.showSurfaceRobustly mWin:Window{a86006 u0
+com.aistudio.edulens.vqrznx/com.example.MainActivity}
+  10-18 16:16:07.636  5842 17397 I FA      : Application backgrounded at: timestamp_millis: 1792320365633
+> 10-18 16:16:07.639  1956  2064 D WindowManager: wms.Update InputWindowHandle: a86006
+com.aistudio.edulens.vqrznx/com.example.MainActivity, frame=[0,0,0,0], touchableRegion=SkRegion((0,0,1080,2400)),
+scaleFactor=1.0, transform=null, windowToken=android.os.BinderProxy@7610ae1, isClone=false, visibal=true,
+focusable=true, changed=true
+> 10-18 16:16:07.639  1956  2059 I ActivityTaskManager: Displayed
+com.aistudio.edulens.vqrznx/com.example.MainActivity: +2s68ms
+> 10-18 16:16:07.641  1956  6321 D CoreBackPreview: Window{999362 u0 Splash Screen com.aistudio.edulens.vqrznx}:
+Setting back callback null
+> 10-18 16:16:07.643  1956  6564 W InputManager-JNI: Input channel object '999362 Splash Screen
+com.aistudio.edulens.vqrznx (client)' was disposed without first being removed with the input manager!
+  10-18 16:16:07.644 17493 17493 D DecorView[]: onWindowFocusChanged hasWindowFocus true
+  10-18 16:16:07.646 17493 17493 I HandWritingStubImpl: refreshLastKeyboardType: 1
+  10-18 16:16:07.667  1956  7495 D CompatibilityChangeReporter: Compat change id reported: 214016041; UID 10321;
+state: ENABLED
+> 10-18 16:16:07.668  1956  2064 D WindowManager: wms.Update InputWindowHandle: a86006
+com.aistudio.edulens.vqrznx/com.example.MainActivity, frame=[0,0,0,0], touchableRegion=SkRegion((0,0,1080,2400)),
+scaleFactor=1.0, transform=null, windowToken=android.os.BinderProxy@7610ae1, isClone=false, visibal=true,
+focusable=true, changed=true
+  10-18 16:16:07.675  1049  1049 I MI-SF   : surfaceflinger setAffinity mode=1
+  10-18 16:16:07.676  1049  1049 I MI-SF   : surfaceflinger setreAffinity reTid=1260
+  10-18 16:16:07.680 17493 17493 I HandWritingStubImpl: getCurrentKeyboardType: 1
+> 10-18 16:16:07.682 31674 31674 I GoogleInputMethodService: GoogleInputMethodService.onStartInput():1552
+onStartInput(EditorInfo{EditorInfo{packageName=com.aistudio.edulens.vqrznx, inputType=0, inputTypeString=NULL,
+enableLearning=false, autoCorrection=false, autoComplete=false, imeOptions=0, privateImeOptions=null,
+actionName=UNSPECIFIED, actionLabel=null, initialSelStart=-1, initialSelEnd=-1, initialCapsMode=0, label=null,
+fieldId=-1, fieldName=null, extras=Bundle[mParcelledData.dataSize=72], hintText=null, hintLocales=[]}}, false)
+  10-18 16:16:07.682 31674 31674 I LatinInputMethodServiceBase:
+LatinInputMethodServiceBase.updateInputViewCoverNavigation():360 Update input view padding,
+isNavbarOverInputWindow=false, bottom inset=130
+  10-18 16:16:07.686 10684 10694 I FontLog : (REDACTED) Received query %s, URI %s
+  10-18 16:16:07.840  1049  1049 D MI-SF   : [FpsStat] distroy...
+> 10-18 16:16:07.895 17493 17513 I .edulens.vqrznx: Compiler allocated 4936KB to compile void
+android.view.ViewRootImpl.performTraversals()
+  10-18 16:16:07.951  1956  1980 W System  : A resource failed to call release.
+  10-18 16:16:08.014  1049  1049 I MI-SF   : surfaceflinger setAffinity mode=1
+  10-18 16:16:11.901  1956  2486 D MIUIInput: [MotionEvent] publisher action=0x4, 1557119357, channel 'ba48297
+NavigationBar0 (server)'
+> 10-18 16:16:11.901  1956  2486 D MIUIInput: [MotionEvent] publisher action=0x0, 1557119357, channel 'a86006
+com.aistudio.edulens.vqrznx/com.example.MainActivity (server)'
+  10-18 16:16:11.901  1956  2486 D MIUIInput: [MotionEvent] publisher action=0x0, 1557119357, channel '[Gesture
+Monitor] miui-gesture (server)'
+  10-18 16:16:11.902  1049  1337 D RefreshRateConfigs: TouchBoost - choose Fps: 120.00 Hz
+  10-18 16:16:11.910 17493 17493 W MirrorManager: this model don't Support
+> 10-18 16:16:12.009  1956  2486 D MIUIInput: [MotionEvent] publisher action=0x1, 1557119466, channel 'a86006
+com.aistudio.edulens.vqrznx/com.example.MainActivity (server)'
+  10-18 16:16:12.010  1956  2486 D MIUIInput: [MotionEvent] publisher action=0x1, 1557119466, channel '[Gesture
+Monitor] miui-gesture (server)'
+  10-18 16:16:12.024   993  4185 E ANDR-PERF-LM: DependentServices: getServices() 97: Service Tracker HAL could not
+find Client Connections
+  10-18 16:16:12.635 14543 14543 I ChargerBatteryIntelligenceReceiver: onBatteryChanged temperature∩╝Ü35,plugType:2
+> 10-18 16:16:12.646 17493 17697 D ProfileInstaller: Installing profile for com.aistudio.edulens.vqrznx
+  10-18 16:16:12.692 31026 31425 I fddz    : (REDACTED) HDM. appOpsListener %s %s
+  10-18 16:16:12.693 31026 31425 I fddz    : (REDACTED) HDM. Ignoring irrelevant audio permission changes for package
+%s
+  10-18 16:16:14.148  1956  2486 D MIUIInput: [MotionEvent] publisher action=0x4, 1557121604, channel 'ba48297
+NavigationBar0 (server)'
+> 10-18 16:16:14.148  1956  2486 D MIUIInput: [MotionEvent] publisher action=0x0, 1557121604, channel 'a86006
+com.aistudio.edulens.vqrznx/com.example.MainActivity (server)'
+  10-18 16:16:14.149  1956  2486 D MIUIInput: [MotionEvent] publisher action=0x0, 1557121604, channel '[Gesture
+Monitor] miui-gesture (server)'
+  10-18 16:16:14.150  1049  1337 D RefreshRateConfigs: TouchBoost - choose Fps: 120.00 Hz
+> 10-18 16:16:14.222  1956  2486 D MIUIInput: [MotionEvent] publisher action=0x1, 1557121679, channel 'a86006
+com.aistudio.edulens.vqrznx/com.example.MainActivity (server)'
+  10-18 16:16:14.223  1956  2486 D MIUIInput: [MotionEvent] publisher action=0x1, 1557121679, channel '[Gesture
+Monitor] miui-gesture (server)'
+  10-18 16:16:14.421  1956  2521 D MiuiNetworkPolicy: updateLimit
+mLimitEnabled=false,enabled=true,mNetworkPriorityMode=0,mThermalForceMode=0
+  10-18 16:16:15.410  1049  1337 D RefreshRateConfigs: TouchBoost - choose Fps: 120.00 Hz
+> 10-18 16:16:15.411  1956  2060 I WindowManager: rotation changed from 0 to 1 due ActivityRecord{25697f1 u0
+com.aistudio.edulens.vqrznx/com.example.MainActivity} t10919}
+  10-18 16:16:15.411  1956  2060 I WindowManager: request=SCREEN_ORIENTATION_UNSPECIFIED sensor=ROTATION_90,true
+user=ROTATION_0, displayId=0
+  10-18 16:16:15.428  3095  8246 D TaskStackChangeListeners: onTaskDisplayChanged =  taskId = 10919 newDisplayId = 0
+  10-18 16:16:15.533 31674 17711 I KeyboardGroupDefParser: KeyboardGroupDefParser.parseKeyboardGroupDef():72
+parseKeyboardGroupDef() 2132213832 -> 0_resource_name_obfuscated : WaitTime = 1 ms : RunTime = 0 ms
+> 10-18 16:16:15.533  1956  2064 D WindowManager: wms.Update InputWindowHandle: a86006
+com.aistudio.edulens.vqrznx/com.example.MainActivity, frame=[0,0,0,0], touchableRegion=SkRegion((0,0,2400,1080)),
+scaleFactor=1.0, transform=null, windowToken=android.os.BinderProxy@7610ae1, isClone=false, visibal=true,
+focusable=true, changed=true
+  10-18 16:16:15.534 31674 31674 I ThemeUtil: ThemeUtil.applyThemeStyle():149 Theme style FocusRingsOverride is
+applied dynamically
+  10-18 16:16:15.534  3095  3095 D Launcher.application: onConfigurationChanged , sw = 392  ,
+isInFoldDeviceLargeScreen= false  , isInFoldLargeScreenfalse
+  10-18 16:16:15.559 31674 31674 I ThemeUtil: ThemeUtil.applyThemeStyle():149 Theme style FocusRingsOverride is
+applied dynamically
+> 10-18 16:16:15.563 31674 31674 I GoogleInputMethodService: GoogleInputMethodService.onStartInput():1552
+onStartInput(EditorInfo{EditorInfo{packageName=com.aistudio.edulens.vqrznx, inputType=0, inputTypeString=NULL,
+enableLearning=false, autoCorrection=false, autoComplete=false, imeOptions=0, privateImeOptions=null,
+actionName=UNSPECIFIED, actionLabel=null, initialSelStart=-1, initialSelEnd=-1, initialCapsMode=0, label=null,
+fieldId=-1, fieldName=null, extras=Bundle[{hand_writing_keyboard_type=1}], hintText=null, hintLocales=[]}}, true)
+  10-18 16:16:15.563 31674 31674 W SessionManager: SessionManager.beginSession():73 Try to begin an already begun
+session [INPUT_SESSION], end it first
+  10-18 16:16:15.563  2823  3125 D EglHelper: createEglContext start
+  10-18 16:16:15.571  2823  2881 D AnimImageWallpaperRender: mProgram not changed
+> 10-18 16:16:15.573  2823  3125 D BitmapUtils: recycleBitmap: bitmap is recyclejava.lang.Exception
+  10-18 16:16:15.573  2823  3125 D BitmapUtils: 	at
+com.miui.miwallpaper.util.BitmapUtils.recycleBitmap(BitmapUtils.java:302)
+  10-18 16:16:15.573  2823  3125 D BitmapUtils: 	at com.miui.miwallpaper.wallpaperservice.impl.desktop.DesktopImageEngi
+neImpl.updateMiniBitmap(DesktopImageEngineImpl.java:124)
+  10-18 16:16:15.630 31674 17432 I PerLanguageDataDownloader: PerLanguageDataDownloader$2.onSuccess():188 Data en
+downloaded with version 2025120304
+> 10-18 16:16:15.631  1956  2872 D CoreBackPreview: Window{a86006 u0
+com.aistudio.edulens.vqrznx/com.example.MainActivity}: Setting back callback null
+> 10-18 16:16:15.632 14543 14543 D AutoDensity: 	getAccessibilityDpi Exception:
+android.provider.Settings$SettingNotFoundException: display_density_forced
+  10-18 16:16:15.633  3048  3533 D VRI[ForceBlack]: vri.Setup new sync id=6560 syncSeqId=48
+> 10-18 16:16:15.634  1956  6564 W InputManager-JNI: Input channel object 'a86006
+com.aistudio.edulens.vqrznx/com.example.MainActivity (client)' was disposed without first being removed with the input
+manager!
+  10-18 16:16:15.635  1049  1049 D MI-SF   : [FpsStat] distroy...
+  10-18 16:16:15.637  1956  2672 I SmartPower.com.xiaomi.discover/10152(3906): background->idle(3004ms) R(broadcast
+start Intent { act=android.intent.action.BATTERY_CHANGED flg=0x60000010 (has extras) }) adj=500.
+  10-18 16:16:15.719  3048  3533 D VRI[ForceBlack]: vri.Setup new sync id=6561 syncSeqId=48
+> 10-18 16:16:15.719  1956  6564 D CoreBackPreview: Window{5422d9 u0
+com.aistudio.edulens.vqrznx/com.example.MainActivity}: Setting back callback
+OnBackInvokedCallbackInfo{mCallback=android.window.IOnBackInvokedCallback$Stub$Proxy@948c09b, mPriority=0}
+  10-18 16:16:15.721  1956  2872 I WindowManager: finishDrawing of orientation change: Window{76e9bca u0 ForceBlack}
+195ms
+  10-18 16:16:15.721  3095  3095 D RecentsImpl: mActivityStateObserver com.example.MainActivity
+  10-18 16:16:15.910  1049  1250 D MI-SF   : [FpsStat] construct...
+> 10-18 16:16:15.917  1956  2872 D WindowManager: wms.Input focus has changed to Window{5422d9 u0
+com.aistudio.edulens.vqrznx/com.example.MainActivity} display=0 updateInputWindows = true
+  10-18 16:16:15.917  1956  2872 I MultiSenceManagerInternalStub: getInstance
+> 10-18 16:16:15.927  1956  2064 D WindowManager: wms.Update InputWindowHandle: 5422d9
+com.aistudio.edulens.vqrznx/com.example.MainActivity, frame=[0,0,0,0], touchableRegion=SkRegion((0,0,2400,1080)),
+scaleFactor=1.0, transform=null, windowToken=android.os.BinderProxy@6779920, isClone=false, visibal=true,
+focusable=true, changed=true
+  10-18 16:16:15.929  3048  3048 D VRI[StatusBar]: vri.reportNextDraw android.view.ViewRootImpl.performTraversals:4013
+android.view.ViewRootImpl.doTraversal:2725 android.view.ViewRootImpl$TraversalRunnable.run:9812
+android.view.Choreographer$CallbackRecord.run:1505 android.view.Choreographer$CallbackRecord.run:1513
+  10-18 16:16:15.930  3048  3048 D VRI[StatusBar]: vri.Setup new sync id=4435 syncSeqId=688
+  10-18 16:16:15.931  1049  2236 I BpBinder: onLastStrongRef automatically unlinking death recipients: <uncached
+descriptor>
+> 10-18 16:16:15.932 17493 17514 I .edulens.vqrznx: Background concurrent copying GC freed 12MB AllocSpace bytes,
+1(24KB) LOS objects, 49% free, 5456KB/10MB, paused 908us,66us total 139.272ms
+> 10-18 16:16:15.937  1049  2236 I SurfaceFlinger: sf.setTransactionState focusRequest transactionId:8400961323460
+frontWin:5422d9 com.aistudio.edulens.vqrznx/com.example.MainActivity
+  10-18 16:16:15.940 17493 17493 D VRI[MainActivity]: vri.reportNextDraw
+android.view.ViewRootImpl.performTraversals:4013 android.view.ViewRootImpl.doTraversal:2725
+android.view.ViewRootImpl$TraversalRunnable.run:9812 android.view.Choreographer$CallbackRecord.run:1505
+android.view.Choreographer$CallbackRecord.run:1513
+  10-18 16:16:15.940 17493 17493 D VRI[MainActivity]: vri.Setup new sync id=0 syncSeqId=0
+  10-18 16:16:15.943  1049  1049 I SurfaceFlinger: sf.transactionIsReadyToBeApplied focusRequest
+transactionId:8400961323460
+> 10-18 16:16:15.944  1049  1927 D SurfaceFlinger: updateInputFlinger::setFocusedWindow: windowName=5422d9
+com.aistudio.edulens.vqrznx/com.example.MainActivity focusRequests.size=1
+  10-18 16:16:15.965  3048  3048 D VRI[StatusBar]: vri.reportDrawFinished syncSeqId=688
+android.view.ViewRootImpl.lambda$createSyncIfNeeded$4$android-view-ViewRootImpl:4081
+android.view.ViewRootImpl$$ExternalSyntheticLambda2.run:6 android.os.Handler.handleCallback:942
+android.os.Handler.dispatchMessage:99 android.os.Looper.loopOnce:211
+  10-18 16:16:15.965 17493 17657 E perf_hint: Session creation failed, mPreferredRateNanos: -1
+  10-18 16:16:15.978  1049  1337 D RefreshRateConfigs: TouchBoost - choose Fps: 120.00 Hz
+> 10-18 16:16:15.982  1956  6313 I WindowManager: finishDrawing of relaunch: Window{5422d9 u0
+com.aistudio.edulens.vqrznx/com.example.MainActivity} 469ms
+> 10-18 16:16:15.983  1956  6313 D WindowManager: wms.finishDrawingLocked: mDrawState=COMMIT_DRAW_PENDING
+Window{5422d9 u0 com.aistudio.edulens.vqrznx/com.example.MainActivity} in
+Surface(name=com.aistudio.edulens.vqrznx/com.example.MainActivity)/@0xca26702
+  10-18 16:16:15.983 17493 17493 I Choreographer: Skipped 31 frames!  The application may be doing too much work on
+its main thread.
+> 10-18 16:16:15.983  1956  6313 D MiuiFreeFormGesturePointerEventListener: finishDrawingWindow: topFullScreenWindow=
+Window{5422d9 u0 com.aistudio.edulens.vqrznx/com.example.MainActivity}
+> 10-18 16:16:15.995  1956  2064 I WindowManager: wms.showSurfaceRobustly mWin:Window{5422d9 u0
+com.aistudio.edulens.vqrznx/com.example.MainActivity}
+  10-18 16:16:16.003  3048  3048 E ReflectUtils: invokeObject
+> 10-18 16:16:16.003  3048  3048 E ReflectUtils: java.lang.reflect.InvocationTargetException
+  10-18 16:16:16.003  3048  3048 E ReflectUtils: 	at java.lang.reflect.Method.invoke(Native Method)
+  10-18 16:16:16.003  3048  3048 E ReflectUtils: 	at
+com.miui.clock.utils.ReflectUtils.invokeObject(ReflectUtils.java:31)
+  10-18 16:16:16.003  3048  3048 E ReflectUtils: 	at com.android.internal.os.ZygoteInit.main(ZygoteInit.java:954)
+> 10-18 16:16:16.003  3048  3048 E ReflectUtils: Caused by: android.content.pm.PackageManager$NameNotFoundException:
+com.mi.health
+  10-18 16:16:16.003  3048  3048 E ReflectUtils: 	at
+android.app.ApplicationPackageManager.getPackageInfoAsUser(ApplicationPackageManager.java:254)
+  10-18 16:16:16.003  3048  3048 E ReflectUtils: 	at
+android.app.ApplicationPackageManager.getPackageInfoAsUser(ApplicationPackageManager.java:242)
+  10-18 16:16:16.003  3048  3048 E ReflectUtils: 	... 27 more
+> 10-18 16:16:16.008  1956  2064 I WindowManager: Screen frozen for +592ms due to Window{5422d9 u0
+com.aistudio.edulens.vqrznx/com.example.MainActivity}
+  10-18 16:16:16.009 17493 17493 D DecorView[]: onWindowFocusChanged hasWindowFocus true
+  10-18 16:16:16.009  1956  2486 D MIUIInput: [MotionEvent] publisher action=0x4, 1557123458, channel 'ba48297
+NavigationBar0 (server)'
+> 10-18 16:16:16.009  1956  2486 D MIUIInput: [MotionEvent] publisher action=0x0, 1557123458, channel '5422d9
+com.aistudio.edulens.vqrznx/com.example.MainActivity (server)'
+  10-18 16:16:16.009  1956  2486 D MIUIInput: [MotionEvent] publisher action=0x0, 1557123458, channel '[Gesture
+Monitor] miui-gesture (server)'
+  10-18 16:16:16.009 17493 17493 I HandWritingStubImpl: refreshLastKeyboardType: 1
+  10-18 16:16:16.015  3048  3048 E ReflectUtils: invokeObject
+> 10-18 16:16:16.015  3048  3048 E ReflectUtils: java.lang.reflect.InvocationTargetException
+  10-18 16:16:16.015  3048  3048 E ReflectUtils: 	at java.lang.reflect.Method.invoke(Native Method)
+  10-18 16:16:16.015  3048  3048 E ReflectUtils: 	at
+com.miui.clock.utils.ReflectUtils.invokeObject(ReflectUtils.java:31)
+  10-18 16:16:16.015  3048  3048 E ReflectUtils: 	at com.android.internal.os.ZygoteInit.main(ZygoteInit.java:954)
+> 10-18 16:16:16.015  3048  3048 E ReflectUtils: Caused by: android.content.pm.PackageManager$NameNotFoundException:
+com.mi.health
+  10-18 16:16:16.015  3048  3048 E ReflectUtils: 	at
+android.app.ApplicationPackageManager.getPackageInfoAsUser(ApplicationPackageManager.java:254)
+  10-18 16:16:16.015  3048  3048 E ReflectUtils: 	at
+android.app.ApplicationPackageManager.getPackageInfoAsUser(ApplicationPackageManager.java:242)
+  10-18 16:16:16.044  1956  2064 D MiuiFreeFormSwitchAppHelper: startSwitchAppFourStep mSwitchingApp=false
+> 10-18 16:16:16.055  1956  6564 D MIUIInput: [MotionEvent] publisher action=0x3, 1557123512, channel '5422d9
+com.aistudio.edulens.vqrznx/com.example.MainActivity (server)'
+  10-18 16:16:16.060 31674 31674 I GoogleInputMethodService: GoogleInputMethodService.onFinishInput():2404
+> 10-18 16:16:16.061 31674 31674 I GoogleInputMethodService: GoogleInputMethodService.onStartInput():1552
+onStartInput(EditorInfo{EditorInfo{packageName=com.aistudio.edulens.vqrznx, inputType=0, inputTypeString=NULL,
+enableLearning=false, autoCorrection=false, autoComplete=false, imeOptions=0, privateImeOptions=null,
+actionName=UNSPECIFIED, actionLabel=null, initialSelStart=-1, initialSelEnd=-1, initialCapsMode=0, label=null,
+fieldId=-1, fieldName=null, extras=Bundle[mParcelledData.dataSize=72], hintText=null, hintLocales=[]}}, false)
+  10-18 16:16:16.061 31674 31674 W LatinInputMethodServiceBase:
+LatinInputMethodServiceBase.updateInputViewCoverNavigation():365 Null input view, cannot update padding!
+  10-18 16:16:16.064  1049  1049 I MI-SF   : surfaceflinger setAffinity mode=1
+  10-18 16:16:17.102  1049  1337 D RefreshRateConfigs: TouchBoost - choose Fps: 120.00 Hz
+> 10-18 16:16:17.103  1956  2060 I WindowManager: rotation changed from 1 to 0 due ActivityRecord{25697f1 u0
+com.aistudio.edulens.vqrznx/com.example.MainActivity} t10919}
+  10-18 16:16:17.103  1956  2060 I WindowManager: request=SCREEN_ORIENTATION_UNSPECIFIED sensor=ROTATION_0,true
+user=ROTATION_0, displayId=0
+  10-18 16:16:17.119  3095  6504 D TaskStackChangeListeners: onTaskDisplayChanged =  taskId = 10919 newDisplayId = 0
+  10-18 16:16:17.239 31674 31674 I ThemeUtil: ThemeUtil.applyThemeStyle():149 Theme style FocusRingsOverride is
+applied dynamically
+> 10-18 16:16:17.240 31674 31674 I GoogleInputMethodService: GoogleInputMethodService.onStartInput():1552
+onStartInput(EditorInfo{EditorInfo{packageName=com.aistudio.edulens.vqrznx, inputType=0, inputTypeString=NULL,
+enableLearning=false, autoCorrection=false, autoComplete=false, imeOptions=0, privateImeOptions=null,
+actionName=UNSPECIFIED, actionLabel=null, initialSelStart=-1, initialSelEnd=-1, initialCapsMode=0, label=null,
+fieldId=-1, fieldName=null, extras=Bundle[{hand_writing_keyboard_type=1}], hintText=null, hintLocales=[]}}, true)
+  10-18 16:16:17.240 31674 31674 W SessionManager: SessionManager.beginSession():73 Try to begin an already begun
+session [INPUT_SESSION], end it first
+  10-18 16:16:17.240 31674 31674 W LatinInputMethodServiceBase:
+LatinInputMethodServiceBase.updateInputViewCoverNavigation():365 Null input view, cannot update padding!
+  10-18 16:16:17.254  2823  2823 I MiuiWallpaper-MiuiKeyguardPictorialWallpaper: onConfigurationChanged
+> 10-18 16:16:17.255  1956  2064 D WindowManager: wms.Update InputWindowHandle: 5422d9
+com.aistudio.edulens.vqrznx/com.example.MainActivity, frame=[0,0,0,0], touchableRegion=SkRegion((0,0,1080,2400)),
+scaleFactor=1.0, transform=null, windowToken=android.os.BinderProxy@6779920, isClone=false, visibal=true,
+focusable=true, changed=true
+  10-18 16:16:17.256  3028  3028 I MiuiPhoneUtils: getOperatorNumeric phone:0 numeric:40445
+  10-18 16:16:17.257  1049  1249 E SurfaceFlinger: Attempt to set frame timeline info on an unrecognized
+IGraphicBufferProducer
+  10-18 16:16:17.266  3028  3065 D TelephonyProvider: match current APN size:  3
+> 10-18 16:16:17.266 14543 14543 D AutoDensity: 	getAccessibilityDpi Exception:
+android.provider.Settings$SettingNotFoundException: display_density_forced
+  10-18 16:16:17.266  2823  3125 D EglHelper: createEglContext start
+  10-18 16:16:17.267  2823  2881 D EglHelper: createEglContext start
+  10-18 16:16:17.275  2823  2881 D MiuiWallpaper-KeyguardImageEngineImpl: which = 2, isDark = true
+> 10-18 16:16:17.275  2823  3125 D BitmapUtils: recycleBitmap: bitmap is recyclejava.lang.Exception
+  10-18 16:16:17.275  2823  3125 D BitmapUtils: 	at
+com.miui.miwallpaper.util.BitmapUtils.recycleBitmap(BitmapUtils.java:302)
+  10-18 16:16:17.275  2823  3125 D BitmapUtils: 	at com.miui.miwallpaper.wallpaperservice.impl.desktop.DesktopImageEngi
+neImpl.updateMiniBitmap(DesktopImageEngineImpl.java:124)
+  10-18 16:16:17.275  2823  2881 D AnimImageGLProgram: updateMaskLayer: need = false, isDark = true this:
+com.miui.miwallpaper.opengl.AnimImageGLProgram@fe41c16
+> 10-18 16:16:17.280  1956  3702 D CoreBackPreview: Window{5422d9 u0
+com.aistudio.edulens.vqrznx/com.example.MainActivity}: Setting back callback null
+  10-18 16:16:17.283 31674 31772 I SP      : Syncing emoticon_content_description (2022081613) with slices:
+[7a635888cb828dfa2fc744b7b9b50f04, 1e1e458ae6f9489ec3bc5ebebea6201c], metadata: false
+  10-18 16:16:17.283  3048  3223 D Bubbs.StackCtrl: Setting position to (-8.000000, 203.000000).
+  10-18 16:16:17.298  3048  3048 W wmshell.main: type=1400 audit(0.0:5112567): avc: denied { read } for
+name="u:object_r:qemu_hw_prop:s0" dev="tmpfs" ino=11168 scontext=u:r:system_app:s0 tcontext=u:object_r:qemu_hw_prop:s0
+tclass=file permissive=0
+> 10-18 16:16:17.301  1956  2872 W InputManager-JNI: Input channel object '5422d9
+com.aistudio.edulens.vqrznx/com.example.MainActivity (client)' was disposed without first being removed with the input
+manager!
+  10-18 16:16:17.305  3048  3533 D VRI[ForceBlack]: vri.reportNextDraw
+android.view.ViewRootImpl.performTraversals:4013 android.view.ViewRootImpl.doTraversal:2725
+android.view.ViewRootImpl$TraversalRunnable.run:9812 android.view.Choreographer$CallbackRecord.run:1505
+android.view.Choreographer$CallbackRecord.run:1513
+  10-18 16:16:17.305  3048  3533 D VRI[ForceBlack]: vri.Setup new sync id=6562 syncSeqId=48
+  10-18 16:16:17.396  3095  3095 D RecentsImpl: mActivityStateObserver com.example.MainActivity
+> 10-18 16:16:17.396  1956  3369 D CoreBackPreview: Window{a7f144f u0
+com.aistudio.edulens.vqrznx/com.example.MainActivity}: Setting back callback
+OnBackInvokedCallbackInfo{mCallback=android.window.IOnBackInvokedCallback$Stub$Proxy@884b661, mPriority=0}
+  10-18 16:16:17.398  3095  3095 W RecentsImpl: onResumed className=com.example.MainActivity   mIsInAnotherPro=false
+isKeyguardLocked=false   mSecuritySpaceGuideShown=false
+  10-18 16:16:17.398   965 13324 I WifiHAL : event received NL80211_CMD_VENDOR, vendor_id = 0x1374, subcmd = 0xd
+  10-18 16:16:17.497  3048  3048 E ReflectUtils: invokeObject
+> 10-18 16:16:17.497  3048  3048 E ReflectUtils: java.lang.reflect.InvocationTargetException
+  10-18 16:16:17.497  3048  3048 E ReflectUtils: 	at java.lang.reflect.Method.invoke(Native Method)
+  10-18 16:16:17.497  3048  3048 E ReflectUtils: 	at
+com.miui.clock.utils.ReflectUtils.invokeObject(ReflectUtils.java:31)
+  10-18 16:16:17.497  3048  3048 E ReflectUtils: 	at com.android.internal.os.ZygoteInit.main(ZygoteInit.java:954)
+> 10-18 16:16:17.497  3048  3048 E ReflectUtils: Caused by: android.content.pm.PackageManager$NameNotFoundException:
+com.mi.health
+  10-18 16:16:17.497  3048  3048 E ReflectUtils: 	at
+android.app.ApplicationPackageManager.getPackageInfoAsUser(ApplicationPackageManager.java:254)
+  10-18 16:16:17.497  3048  3048 E ReflectUtils: 	at
+android.app.ApplicationPackageManager.getPackageInfoAsUser(ApplicationPackageManager.java:242)
+  10-18 16:16:17.500  3048  3048 E ReflectUtils: invokeObject
+> 10-18 16:16:17.500  3048  3048 E ReflectUtils: java.lang.reflect.InvocationTargetException
+  10-18 16:16:17.500  3048  3048 E ReflectUtils: 	at java.lang.reflect.Method.invoke(Native Method)
+  10-18 16:16:17.500  3048  3048 E ReflectUtils: 	at
+com.miui.clock.utils.ReflectUtils.invokeObject(ReflectUtils.java:31)
+  10-18 16:16:17.500  3048  3048 E ReflectUtils: 	at com.android.internal.os.ZygoteInit.main(ZygoteInit.java:954)
+> 10-18 16:16:17.500  3048  3048 E ReflectUtils: Caused by: android.content.pm.PackageManager$NameNotFoundException:
+com.mi.health
+  10-18 16:16:17.500  3048  3048 E ReflectUtils: 	at
+android.app.ApplicationPackageManager.getPackageInfoAsUser(ApplicationPackageManager.java:254)
+  10-18 16:16:17.500  3048  3048 E ReflectUtils: 	at
+android.app.ApplicationPackageManager.getPackageInfoAsUser(ApplicationPackageManager.java:242)
+  10-18 16:16:17.523  1049  1249 D MI-SF   : [FpsStat] construct...
+> 10-18 16:16:17.531  1956  2456 D WindowManager: wms.Input focus has changed to Window{a7f144f u0
+com.aistudio.edulens.vqrznx/com.example.MainActivity} display=0 updateInputWindows = true
+  10-18 16:16:17.531  1956  2456 I MultiSenceManagerInternalStub: getInstance
+> 10-18 16:16:17.543  1956  2064 D WindowManager: wms.Update InputWindowHandle: a7f144f
+com.aistudio.edulens.vqrznx/com.example.MainActivity, frame=[0,0,0,0], touchableRegion=SkRegion((0,0,1080,2400)),
+scaleFactor=1.0, transform=null, windowToken=android.os.BinderProxy@7562eae, isClone=false, visibal=true,
+focusable=true, changed=true
+> 10-18 16:16:17.545  1049  1250 I SurfaceFlinger: sf.setTransactionState focusRequest transactionId:8400961323635
+frontWin:a7f144f com.aistudio.edulens.vqrznx/com.example.MainActivity
+  10-18 16:16:17.546  3048  3048 D VRI[StatusBar]: vri.reportNextDraw android.view.ViewRootImpl.performTraversals:4013
+android.view.ViewRootImpl.doTraversal:2725 android.view.ViewRootImpl$TraversalRunnable.run:9812
+android.view.Choreographer$CallbackRecord.run:1505 android.view.Choreographer$CallbackRecord.run:1513
+  10-18 16:16:17.546  3048  3048 D VRI[StatusBar]: vri.Setup new sync id=4436 syncSeqId=688
+  10-18 16:16:17.547  1049  1250 I BpBinder: onLastStrongRef automatically unlinking death recipients: <uncached
+descriptor>
+> 10-18 16:16:17.549  1049  1927 D SurfaceFlinger: updateInputFlinger::setFocusedWindow: windowName=a7f144f
+com.aistudio.edulens.vqrznx/com.example.MainActivity focusRequests.size=1
+  10-18 16:16:17.551 17493 17493 D VRI[MainActivity]: vri.reportNextDraw
+android.view.ViewRootImpl.performTraversals:4013 android.view.ViewRootImpl.doTraversal:2725
+android.view.ViewRootImpl$TraversalRunnable.run:9812 android.view.Choreographer$CallbackRecord.run:1505
+android.view.Choreographer$CallbackRecord.run:1513
+  10-18 16:16:17.551 17493 17493 D VRI[MainActivity]: vri.Setup new sync id=0 syncSeqId=0
+  10-18 16:16:17.573  1049  1337 D RefreshRateConfigs: TouchBoost - choose Fps: 120.00 Hz
+> 10-18 16:16:17.579  1956  3702 I WindowManager: finishDrawing of relaunch: Window{a7f144f u0
+com.aistudio.edulens.vqrznx/com.example.MainActivity} 364ms
+> 10-18 16:16:17.580  1956  3702 D WindowManager: wms.finishDrawingLocked: mDrawState=COMMIT_DRAW_PENDING
+Window{a7f144f u0 com.aistudio.edulens.vqrznx/com.example.MainActivity} in
+Surface(name=com.aistudio.edulens.vqrznx/com.example.MainActivity)/@0xe819f5e
+> 10-18 16:16:17.580  1956  3702 D MiuiFreeFormGesturePointerEventListener: finishDrawingWindow: topFullScreenWindow=
+Window{a7f144f u0 com.aistudio.edulens.vqrznx/com.example.MainActivity}
+> 10-18 16:16:17.590  1956  2064 I WindowManager: wms.showSurfaceRobustly mWin:Window{a7f144f u0
+com.aistudio.edulens.vqrznx/com.example.MainActivity}
+> 10-18 16:16:17.592  1956  2064 D WindowManager: wms.Update InputWindowHandle: a7f144f
+com.aistudio.edulens.vqrznx/com.example.MainActivity, frame=[0,0,0,0], touchableRegion=SkRegion((0,0,1080,2400)),
+scaleFactor=1.0, transform=null, windowToken=android.os.BinderProxy@7562eae, isClone=false, visibal=true,
+focusable=true, changed=true
+> 10-18 16:16:17.597  1956  2064 I WindowManager: Screen frozen for +487ms due to Window{a7f144f u0
+com.aistudio.edulens.vqrznx/com.example.MainActivity}
+  10-18 16:16:17.598  1049  1249 D MI-SF   : setCalledByRotationLayers old = 1, new = 0
+  10-18 16:16:17.605 17493 17493 D DecorView[]: onWindowFocusChanged hasWindowFocus true
+  10-18 16:16:17.629 31674 31674 I GoogleInputMethodService: GoogleInputMethodService.onFinishInput():2404
+> 10-18 16:16:17.630 31674 31674 I GoogleInputMethodService: GoogleInputMethodService.onStartInput():1552
+onStartInput(EditorInfo{EditorInfo{packageName=com.aistudio.edulens.vqrznx, inputType=0, inputTypeString=NULL,
+enableLearning=false, autoCorrection=false, autoComplete=false, imeOptions=0, privateImeOptions=null,
+actionName=UNSPECIFIED, actionLabel=null, initialSelStart=-1, initialSelEnd=-1, initialCapsMode=0, label=null,
+fieldId=-1, fieldName=null, extras=Bundle[mParcelledData.dataSize=72], hintText=null, hintLocales=[]}}, false)
+  10-18 16:16:17.630 31674 31674 W LatinInputMethodServiceBase:
+LatinInputMethodServiceBase.updateInputViewCoverNavigation():365 Null input view, cannot update padding!
+  10-18 16:16:17.631 31674 17671 I Module  :
+DeviceLockedStatusModuleProvider$Module.updateDeviceLockedStatusInternal():119 repeatCheckTimes = 0, locked = false
+  10-18 16:16:18.272  1956  2486 D MIUIInput: [MotionEvent] publisher action=0x4, 1557125728, channel 'ba48297
+NavigationBar0 (server)'
+> 10-18 16:16:18.272  1956  2486 D MIUIInput: [MotionEvent] publisher action=0x0, 1557125728, channel 'a7f144f
+com.aistudio.edulens.vqrznx/com.example.MainActivity (server)'
+  10-18 16:16:18.272  1956  2486 D MIUIInput: [MotionEvent] publisher action=0x0, 1557125728, channel '[Gesture
+Monitor] miui-gesture (server)'
+  10-18 16:16:18.273  1049  1337 D RefreshRateConfigs: TouchBoost - choose Fps: 120.00 Hz
+  10-18 16:16:18.288  1049  1049 D MI-SF   : [FpsStat] distroy...
+> 10-18 16:16:18.290  1956  2456 D MIUIInput: [MotionEvent] publisher action=0x3, 1557125747, channel 'a7f144f
+com.aistudio.edulens.vqrznx/com.example.MainActivity (server)'
+  10-18 16:16:18.345  1956  2486 D InputDispatcher: Dropping inconsistent motion up or cancel event: deviceId=5,
+source=00001002, displayId=0, actionMasked=1
+  10-18 16:16:18.346  1956  2486 D MIUIInput: [MotionEvent] publisher action=0x1, 1557125802, channel '[Gesture
+Monitor] miui-gesture (server)'
+  10-18 16:16:20.650  1956  2109 I libprocessgroup: Successfully killed process cgroup uid 10289 pid 21573 in 0ms
+> 10-18 16:16:20.651  1956  2625 E ProcessManager: error write exception log
+  10-18 16:16:20.660 11302 11494 I .xiaomi.mipicks: oneway function results for code 3 on binder at 0xb400007390ee80a0
+will be dropped but finished with status UNKNOWN_TRANSACTION
+  10-18 16:16:20.661  1956  2060 I NetworkBoostStatusManager: onUidGone uid: 10289
+  10-18 16:16:20.731 29474 29503 I BugleSpam: HadesBitmapStore: Purged 0 images during memory reclamation
+> 10-18 16:16:20.732  1956  2625 E ProcessManager: error write exception log
+  10-18 16:16:20.733  6774 26817 D ProcessObserverV10: onProcessDied:pid = 843,died-uid=10118
+  10-18 16:16:20.733  1956  2060 I NetworkBoostStatusManager: onUidGone uid: 10118
+  10-18 16:16:20.775  1956  2109 I libprocessgroup: Successfully killed process cgroup uid 10202 pid 9033 in 0ms
+> 10-18 16:16:20.776  1956  2625 E ProcessManager: error write exception log
+  10-18 16:16:20.785 11302 11494 I .xiaomi.mipicks: oneway function results for code 3 on binder at 0xb400007390ee80a0
+will be dropped but finished with status UNKNOWN_TRANSACTION
+  10-18 16:16:20.788  6774 26817 D ProcessObserverV10: onProcessDied:pid = 9033,died-uid=10202
+  10-18 16:16:21.231  3048  3654 E MDC     : registerContentObserver
+> 10-18 16:16:21.231  3048  3654 E MDC     : java.lang.SecurityException: Failed to find provider
+com.milink.service.device for user 0; expected to find a valid ContentProvider for this authority
+> 10-18 16:16:21.231  3048  3654 E MDC     : 	at android.os.Parcel.createExceptionOrNull(Parcel.java:3011)
+> 10-18 16:16:21.231  3048  3654 E MDC     : 	at android.os.Parcel.createException(Parcel.java:2995)
+> 10-18 16:16:21.231  3048  3654 E MDC     : 	at android.os.Parcel.readException(Parcel.java:2978)
+> 10-18 16:16:21.231  3048  3654 E MDC     : 	at android.os.Parcel.readException(Parcel.java:2920)
+  10-18 16:16:21.231  3048  3654 E MDC     : 	at
+android.content.IContentService$Stub$Proxy.registerContentObserver(IContentService.java:1113)
+  10-18 16:16:21.231  3048  3654 E MDC     : 	at
+android.content.ContentResolver.registerContentObserver(ContentResolver.java:2715)
+  10-18 16:16:21.231  3048  3654 E MDC     : 	at android.os.HandlerThread.run(HandlerThread.java:67)
+> 10-18 16:16:21.231  3048  3654 E MDC     : Caused by: android.os.RemoteException: Remote stack trace:
+  10-18 16:16:21.231  3048  3654 E MDC     : 	at
+com.android.server.content.ContentService.registerContentObserver(ContentService.java:376)
+  10-18 16:16:21.231  3048  3654 E MDC     : 	at
+android.content.IContentService$Stub.onTransact(IContentService.java:517)
+  10-18 16:16:21.232  3048  3654 E MDC     : startInstantSearch
+> 10-18 16:16:21.232  3048  3654 E MDC     : java.lang.IllegalArgumentException: Unknown authority
+com.milink.service.device
+  10-18 16:16:21.232  3048  3654 E MDC     : 	at android.content.ContentResolver.call(ContentResolver.java:2450)
+  10-18 16:16:21.232  3048  3654 E MDC     : 	at android.content.ContentResolver.call(ContentResolver.java:2433)
+  10-18 16:16:21.748  3048  3654 E MDC     : stopInstantSearch
+> 10-18 16:16:21.748  3048  3654 E MDC     : java.lang.IllegalArgumentException: Unknown authority
+com.milink.service.device
+  10-18 16:16:21.748  3048  3654 E MDC     : 	at android.content.ContentResolver.call(ContentResolver.java:2450)
+  10-18 16:16:21.748  3048  3654 E MDC     : 	at android.content.ContentResolver.call(ContentResolver.java:2433)
+  10-18 16:16:21.755  3095  3210 W RecentsImpl: updateFsgWindowVisibilityState   isEnter=false
+typeFrom=typefrom_status_bar_expansion   isOpen=false   mIsInAnotherPro=false   mIsStatusBarExpansion=false
+> 10-18 16:16:21.763  1956  6321 D WindowManager: wms.Input focus has changed to Window{a7f144f u0
+com.aistudio.edulens.vqrznx/com.example.MainActivity} display=0 updateInputWindows = true
+  10-18 16:16:21.763  1956  6321 I MultiSenceManagerInternalStub: getInstance
+  10-18 16:16:21.766  3048  3048 D BrightnessController: ToggleSlider: onStop: value: 362
+  10-18 16:16:21.767  1049  1049 D MI-SF   : [FpsStat] distroy...
+> 10-18 16:16:21.768  1049  3572 I SurfaceFlinger: sf.setTransactionState focusRequest transactionId:8400961323772
+frontWin:a7f144f com.aistudio.edulens.vqrznx/com.example.MainActivity
+  10-18 16:16:21.773  1049  1049 I SurfaceFlinger: sf.transactionIsReadyToBeApplied focusRequest
+transactionId:8400961323772
+> 10-18 16:16:21.775  1049  1927 D SurfaceFlinger: updateInputFlinger::setFocusedWindow: windowName=a7f144f
+com.aistudio.edulens.vqrznx/com.example.MainActivity focusRequests.size=1
+  10-18 16:16:21.779 17493 17493 D DecorView[]: onWindowFocusChanged hasWindowFocus true
+  10-18 16:16:21.780 17493 17493 I HandWritingStubImpl: refreshLastKeyboardType: 1
+  10-18 16:16:21.787 31674 31674 I GoogleInputMethodService: GoogleInputMethodService.onFinishInput():2404
+> 10-18 16:16:21.789 31674 31674 I GoogleInputMethodService: GoogleInputMethodService.onStartInput():1552
+onStartInput(EditorInfo{EditorInfo{packageName=com.aistudio.edulens.vqrznx, inputType=0, inputTypeString=NULL,
+enableLearning=false, autoCorrection=false, autoComplete=false, imeOptions=0, privateImeOptions=null,
+actionName=UNSPECIFIED, actionLabel=null, initialSelStart=-1, initialSelEnd=-1, initialCapsMode=0, label=null,
+fieldId=-1, fieldName=null, extras=Bundle[mParcelledData.dataSize=72], hintText=null, hintLocales=[]}}, false)
+  10-18 16:16:21.789 31674 17711 I Module  :
+DeviceLockedStatusModuleProvider$Module.updateDeviceLockedStatusInternal():119 repeatCheckTimes = 0, locked = false
+  10-18 16:16:21.789 31674 31674 W LatinInputMethodServiceBase:
+LatinInputMethodServiceBase.updateInputViewCoverNavigation():365 Null input view, cannot update padding!
+  10-18 16:16:22.158  1956  2486 D MIUIInput: [MotionEvent] publisher action=0x4, 1557129614, channel 'ba48297
+NavigationBar0 (server)'
+> 10-18 16:16:22.158  1956  2486 D MIUIInput: [MotionEvent] publisher action=0x0, 1557129614, channel 'a7f144f
+com.aistudio.edulens.vqrznx/com.example.MainActivity (server)'
+  10-18 16:16:22.159  1956  2486 D MIUIInput: [MotionEvent] publisher action=0x0, 1557129614, channel '[Gesture
+Monitor] miui-gesture (server)'
+  10-18 16:16:22.159  1049  1337 D RefreshRateConfigs: TouchBoost - choose Fps: 120.00 Hz
+  10-18 16:16:22.229  1956  2672 I SmartPower.com.mi.android.globallauncher/10111(3095): background->idle(3002ms)
+R(broadcast start Intent { act=com.android.systemui.fsgesture flg=0x4000010 (has extras) }) adj=100.
+> 10-18 16:16:22.237  1956  2486 D MIUIInput: [MotionEvent] publisher action=0x1, 1557129694, channel 'a7f144f
+com.aistudio.edulens.vqrznx/com.example.MainActivity (server)'
+  10-18 16:16:22.237  1956  2486 D MIUIInput: [MotionEvent] publisher action=0x1, 1557129694, channel '[Gesture
+Monitor] miui-gesture (server)'
+  10-18 16:16:22.305 17493 17493 I HandWritingStubImpl: refreshLastKeyboardType: 1
+  10-18 16:16:22.312 31674 31674 I GoogleInputMethodService: GoogleInputMethodService.onFinishInput():2404
+> 10-18 16:16:22.312 31674 31674 I GoogleInputMethodService: GoogleInputMethodService.onStartInput():1552
+onStartInput(EditorInfo{EditorInfo{packageName=com.aistudio.edulens.vqrznx, inputType=8001,
+inputTypeString=Normal[AutoCorrect], enableLearning=true, autoCorrection=true, autoComplete=true, imeOptions=2000006,
+privateImeOptions=null, actionName=DONE, actionLabel=null, initialSelStart=0, initialSelEnd=0, initialCapsMode=0,
+label=null, fieldId=-1, fieldName=null, extras=Bundle[mParcelledData.dataSize=472], hintText=null, hintLocales=[]}},
+false)
+  10-18 16:16:22.313 31674 31674 W LatinInputMethodServiceBase:
+LatinInputMethodServiceBase.updateInputViewCoverNavigation():365 Null input view, cannot update padding!
+  10-18 16:16:22.313 31674 31674 I HardKeyTracker: HardKeyTracker.unregisterKeySequence():259 Unregister key sequence
+qwe{labelResId=2132020443, callback=ged@ce75c2f, lastModifier=2, keyCodes=[56], actions=[0]}
+  10-18 16:16:22.314 17493 17493 D InsetsController: show(ime(), fromIme=false)
+> 10-18 16:16:22.314 31674 31674 I GoogleInputMethodService: GoogleInputMethodService.onStartInput():1552
+onStartInput(EditorInfo{EditorInfo{packageName=com.aistudio.edulens.vqrznx, inputType=8001,
+inputTypeString=Normal[AutoCorrect], enableLearning=true, autoCorrection=true, autoComplete=true, imeOptions=2000006,
+privateImeOptions=null, actionName=DONE, actionLabel=null, initialSelStart=0, initialSelEnd=0, initialCapsMode=0,
+label=null, fieldId=-1, fieldName=null, extras=Bundle[mParcelledData.dataSize=472], hintText=null, hintLocales=[]}},
+true)
+  10-18 16:16:22.314 31674 31674 W SessionManager: SessionManager.beginSession():73 Try to begin an already begun
+session [INPUT_SESSION], end it first
+  10-18 16:16:22.314 31674 31674 W LatinInputMethodServiceBase:
+LatinInputMethodServiceBase.updateInputViewCoverNavigation():365 Null input view, cannot update padding!
+  10-18 16:16:22.316 31674 31674 I GoogleInputMethodService: GoogleInputMethodService.onCreateInputView():1492
+onCreateInputView()
+> 10-18 16:16:22.317  1049  1250 D MI-SF   : updateScene: module = 270 (Input), value = 1, pkg =
+com.aistudio.edulens.vqrznx, Vrr = 0
+  10-18 16:16:22.317  1049  1250 D RefreshRateConfigs: TouchBoost - choose Fps: 120.00 Hz
+  10-18 16:16:22.317  1049  1250 D MI-SF   : updateScene mSetInputFlag status 1
+  10-18 16:16:22.320 31674 31674 I LatinInputMethodServiceBase:
+LatinInputMethodServiceBase.updateInputViewCoverNavigation():360 Update input view padding,
+isNavbarOverInputWindow=false, bottom inset=130
+> 10-18 16:16:22.320 31674 31674 I GoogleInputMethodService: GoogleInputMethodService.onStartInputView():1638
+onStartInputView(EditorInfo{EditorInfo{packageName=com.aistudio.edulens.vqrznx, inputType=8001,
+inputTypeString=Normal[AutoCorrect], enableLearning=true, autoCorrection=true, autoComplete=true, imeOptions=2000006,
+privateImeOptions=null, actionName=DONE, actionLabel=null, initialSelStart=0, initialSelEnd=0, initialCapsMode=0,
+label=null, fieldId=-1, fieldName=null, extras=Bundle[{android.support.text.emoji.emojiCompat_metadataVersion=12,
+androidx.core.view.inputmethod.EditorInfoCompat.STYLUS_HANDWRITING_ENABLED=false,
+android.support.text.emoji.emojiCompat_replaceAll=false, hand_writing_keyboard_type=1}], hintText=null,
+hintLocales=[]}}, false)
+  10-18 16:16:22.321 31674 31674 W ModuleManager: ModuleManager.loadModule():641 Module qyw is not available
+  10-18 16:16:22.321 31674 31674 I KeyboardHeightUtil: KeyboardHeightUtil.getOemKeyboardHeightRatio():81
+systemKeyboardHeightRatio:1.000000.
+  10-18 16:16:22.357 31674 31674 I ImeInterfacePrivate: IIme.createImeWithClassName():63 IIme created from
+HiltImeFactory: com.google.android.apps.inputmethod.libs.latin5.LatinIme
+> 10-18 16:16:22.357 31674 31674 I AbstractIme: AbstractIme.onActivate():111 LatinIme.onActivate() : EditorInfo =
+EditorInfo{packageName=com.aistudio.edulens.vqrznx, inputType=8001, inputTypeString=Normal[AutoCorrect],
+enableLearning=true, autoCorrection=true, autoComplete=true, imeOptions=2000006, privateImeOptions=null,
+actionName=DONE, actionLabel=null, initialSelStart=0, initialSelEnd=0, initialCapsMode=0, label=null, fieldId=-1,
+fieldName=null, extras=Bundle[{android.support.text.emoji.emojiCompat_metadataVersion=12,
+androidx.core.view.inputmethod.EditorInfoCompat.STYLUS_HANDWRITING_ENABLED=false,
+android.support.text.emoji.emojiCompat_replaceAll=false, hand_writing_keyboard_type=1}], hintText=null,
+hintLocales=[]}, IncognitoMode = false, DeviceLocked = false
+  10-18 16:16:22.358 31674 31674 I InputBundle: InputBundle.consumeEvent():1062 Skip consuming an event as keyboard
+status is INACTIVE
+  10-18 16:16:22.358 31674 31674 I LatinIme: LatinIme.updateEnableInlineSuggestionsOnDecoderSideFlags():1307 inline
+flag updated to:false
+  10-18 16:16:22.388  1956  6321 I InputMethodManagerService: IMMS.applyImeVisibility(), setVisible = true, mCurclient
+= ClientState{66e068e uid=10321 pid=17493 displayId=0}
+> 10-18 16:16:22.393  1956  6321 I WindowManager: WMS.showImePostLayout(), imeTarget = Window{a7f144f u0
+com.aistudio.edulens.vqrznx/com.example.MainActivity}
+  10-18 16:16:22.397 31674 31674 I WindowMetricsNotification: WindowMetricsNotification.notifyWithWindow():176
+  10-18 16:16:22.397 31674 31674 I DeviceModeModule: DeviceModeModule.calculateAndNotify():242 Device mode 'phone'
+from display metrics 'DisplayMetrics{density=0.0, width=1080, height=2400, scaledDensity=0.0, xdpi=394.705,
+ydpi=394.307}' or smallestScreenWidthDp: 392
+  10-18 16:16:22.424  1956  6321 I InputMethodManagerService: IMMS.applyImeVisibility(), setVisible = true, mCurclient
+= ClientState{66e068e uid=10321 pid=17493 displayId=0}
+> 10-18 16:16:22.424  1956  6321 I WindowManager: WMS.showImePostLayout(), imeTarget = Window{a7f144f u0
+com.aistudio.edulens.vqrznx/com.example.MainActivity}
+  10-18 16:16:22.429 17493 17493 W OnBackInvokedCallback: OnBackInvokedCallback is not enabled for the application.
+  10-18 16:16:22.429 17493 17493 W OnBackInvokedCallback: Set 'android:enableOnBackInvokedCallback="true"' in the
+application manifest.
+  10-18 16:16:22.831  1049  1049 I MI-SF   : surfaceflinger setAffinity mode=0
+> 10-18 16:16:22.846  1956  5108 D PerfShielderService:
+com.aistudio.edulens.vqrznx|com.aistudio.edulens.vqrznx/com.example.MainActivity|328|1557130040286625|75|2|8
+> 10-18 16:16:22.847  5576 19623 W MiuiPerfServiceClient:
+interceptAndQueuing:17493|com.aistudio.edulens.vqrznx|328|75|1557130040286625|Slow handle animation|8
+  10-18 16:16:22.854 10684 10684 D BoundBrokerSvc: onUnbind: Intent {
+act=com.google.android.gms.auth.aang.events.services.START dat=chimera-action:/...
+cmp=com.google.android.gms/.chimera.PersistentApiService }
+  10-18 16:16:22.859  1049  1049 I MI-SF   : surfaceflinger setAffinity mode=1
+  10-18 16:16:25.020  1956  2486 D MIUIInput: [MotionEvent] publisher action=0x4, 1557132475, channel 'ba48297
+NavigationBar0 (server)'
+> 10-18 16:16:25.020  1956  2486 D MIUIInput: [MotionEvent] publisher action=0x0, 1557132475, channel 'a7f144f
+com.aistudio.edulens.vqrznx/com.example.MainActivity (server)'
+  10-18 16:16:25.020  1956  2486 D MIUIInput: [MotionEvent] publisher action=0x0, 1557132475, channel '[Gesture
+Monitor] miui-gesture (server)'
+  10-18 16:16:25.021  1049  1337 D RefreshRateConfigs: TouchBoost - choose Fps: 120.00 Hz
+> 10-18 16:16:25.086  1956  2486 D MIUIInput: [MotionEvent] publisher action=0x1, 1557132543, channel 'a7f144f
+com.aistudio.edulens.vqrznx/com.example.MainActivity (server)'
+  10-18 16:16:25.086  1956  2486 D MIUIInput: [MotionEvent] publisher action=0x1, 1557132543, channel '[Gesture
+Monitor] miui-gesture (server)'
+  10-18 16:16:25.114  1956  1956 D UiModeManager: updateConfigurationLocked: mDockState=0; mCarMode=false; mCar=false;
+mPowerSave=false; mComputedNightMode=true; mNightMode=2; uiMode=44
+  10-18 16:16:25.158 17493 17493 D InsetsController: show(ime(), fromIme=false)
+> 10-18 16:16:25.159 31674 31674 I GoogleInputMethodService: GoogleInputMethodService.onStartInput():1552
+onStartInput(EditorInfo{EditorInfo{packageName=com.aistudio.edulens.vqrznx, inputType=8001,
+inputTypeString=Normal[AutoCorrect], enableLearning=true, autoCorrection=true, autoComplete=true, imeOptions=2000006,
+privateImeOptions=null, actionName=DONE, actionLabel=null, initialSelStart=0, initialSelEnd=0, initialCapsMode=0,
+label=null, fieldId=-1, fieldName=null, extras=Bundle[mParcelledData.dataSize=472], hintText=null, hintLocales=[]}},
+true)
+  10-18 16:16:25.159 31674 31674 W SessionManager: SessionManager.beginSession():73 Try to begin an already begun
+session [INPUT_SESSION], end it first
+  10-18 16:16:25.159 31674 31674 W SessionManager: SessionManager.endSession():121 Child session [INPUT_VIEW_SESSION]
+is not ended while ending session [{INPUT_SESSION=1792320382314, INPUT_VIEW_SESSION=1792320382321,
+IME_SESSION=1792320382354, TRAINING_CACHE_SESSION=1792320382357}], ending it now.
+  10-18 16:16:25.159 31674 31674 I LatinInputMethodServiceBase:
+LatinInputMethodServiceBase.updateInputViewCoverNavigation():360 Update input view padding,
+isNavbarOverInputWindow=false, bottom inset=130
+> 10-18 16:16:25.160 31674 31674 I GoogleInputMethodService: GoogleInputMethodService.onStartInputView():1638
+onStartInputView(EditorInfo{EditorInfo{packageName=com.aistudio.edulens.vqrznx, inputType=8001,
+inputTypeString=Normal[AutoCorrect], enableLearning=true, autoCorrection=true, autoComplete=true, imeOptions=2000006,
+privateImeOptions=null, actionName=DONE, actionLabel=null, initialSelStart=0, initialSelEnd=0, initialCapsMode=0,
+label=null, fieldId=-1, fieldName=null, extras=Bundle[{android.support.text.emoji.emojiCompat_metadataVersion=12,
+androidx.core.view.inputmethod.EditorInfoCompat.STYLUS_HANDWRITING_ENABLED=false,
+android.support.text.emoji.emojiCompat_replaceAll=false, hand_writing_keyboard_type=1}], hintText=null,
+hintLocales=[]}}, true)
+  10-18 16:16:25.160 31674 31674 I InputBundle: InputBundle.consumeEvent():1062 Skip consuming an event as keyboard
+status is INACTIVE
+  10-18 16:16:25.161 31674 31674 I AbstractIme: AbstractIme.onDeactivate():229 LatinIme.onDeactivate()
+  10-18 16:16:25.198 31674 31674 I InputBundle: InputBundle.activateIme():599 activateIme: INACTIVE, keyboardType=prime
+> 10-18 16:16:25.199 31674 31674 I AbstractIme: AbstractIme.onActivate():111 LatinIme.onActivate() : EditorInfo =
+EditorInfo{packageName=com.aistudio.edulens.vqrznx, inputType=8001, inputTypeString=Normal[AutoCorrect],
+enableLearning=true, autoCorrection=true, autoComplete=true, imeOptions=2000006, privateImeOptions=null,
+actionName=DONE, actionLabel=null, initialSelStart=0, initialSelEnd=0, initialCapsMode=0, label=null, fieldId=-1,
+fieldName=null, extras=Bundle[{android.support.text.emoji.emojiCompat_metadataVersion=12,
+androidx.core.view.inputmethod.EditorInfoCompat.STYLUS_HANDWRITING_ENABLED=false,
+android.support.text.emoji.emojiCompat_replaceAll=false, hand_writing_keyboard_type=1}], hintText=null,
+hintLocales=[]}, IncognitoMode = false, DeviceLocked = false
+  10-18 16:16:25.200 31674 31674 I Delight5Facilitator: Delight5Facilitator.initializeForIme():748 initializeForIme()
+: Locale = [en_IN], layout = qwerty
+  10-18 16:16:25.200 31674 31756 I NebulaeTrainingCacheMetricsProcessor:
+NebulaeTrainingCacheMetricsProcessor.processBeginSession():277 Begin training cache session: /
+  10-18 16:16:25.221 31674 31674 W AccessPointsManager: AccessPointsManager.addAccessPoint():1138 The holder
+controller #0x7f0b2940 is not registered
+> 10-18 16:16:25.221  1956  5108 I WindowManager: WMS.showImePostLayout(), imeTarget = Window{a7f144f u0
+com.aistudio.edulens.vqrznx/com.example.MainActivity}
+  10-18 16:16:25.224  1956  2064 I ImeInsetsSourceProvider: ImeInsetsSourceProvider.scheduleShowImePostLayout() Run
+showImeRunner.
+  10-18 16:16:25.224  1956  2064 I ImeInsetsSourceProvider: ImeInsetsSourceProvider.scheduleShowImePostLayout()
+isReadyToShowIme.
+  10-18 16:16:25.235 31674 31674 I GoogleInputMethodService: GoogleInputMethodService$1.onKeyboardViewShown():356
+onKeyboardViewShown: keyboardType=prime, keyboardViewType=BODY
+keyboardView=com.google.android.libraries.inputmethod.widgets.SoftKeyboardView{37adfc V.E...... ........ 0,0-1080,580}
+> 10-18 16:16:25.235  1956  4405 I WindowManager: WMS.showImePostLayout(), imeTarget = Window{a7f144f u0
+com.aistudio.edulens.vqrznx/com.example.MainActivity}
+  10-18 16:16:25.235 31674 31674 I BaseKeyboardSizeHelper: BaseKeyboardSizeHelper.calculateMaxKeyboardBodyHeight():79
+leave 267 height for app when ime window height:2180, header height:121 and isFullscreenMode:false, so the max
+keyboard body height is:1792
+  10-18 16:16:25.235 31674 31674 I NewLanguagePromptExtension: NewLanguagePromptExtension$1.onKeyboardViewShown():88
+Not show new language banner: not prime keyboard, or the extension not activated.
+  10-18 16:16:25.515  1956  2672 I SmartPower.com.openai.chatgpt/10087(15256): background->idle(3002ms) R(broadcast
+start Intent { act=com.google.android.c2dm.intent.RECEIVE flg=0x1000010 pkg=com.openai.chatgpt
+cmp=com.openai.chatgpt/com.google.firebase.iid.FirebaseInstanceIdReceiver (has extras) }) adj=701.
+> 10-18 16:16:25.699  1956  4405 D PerfShielderService:
+com.aistudio.edulens.vqrznx|com.aistudio.edulens.vqrznx/com.example.MainActivity|299|1557132859453447|72|2|8
+> 10-18 16:16:25.700  5576 19623 W MiuiPerfServiceClient:
+interceptAndQueuing:17493|com.aistudio.edulens.vqrznx|299|72|1557132859453447|Slow handle animation|8
+  10-18 16:16:25.959  1956  2486 D MIUIInput: [MotionEvent] publisher action=0x4, 1557133414, channel 'ba48297
+NavigationBar0 (server)'
+  10-18 16:16:25.960  1956  2486 D MIUIInput: [MotionEvent] publisher action=0x0, 1557133414, channel '5b2445b
+InputMethod (server)'
+  10-18 16:16:29.336 31674 31674 V InputMethodService: CALL: hideWindow
+> 10-18 16:16:29.336  1049  1249 D MI-SF   : updateScene: module = 270 (Input), value = 0, pkg =
+com.aistudio.edulens.vqrznx, Vrr = 0
+  10-18 16:16:29.336  1049  1249 D RefreshRateConfigs: TouchBoost - choose Fps: 120.00 Hz
+  10-18 16:16:29.336  1049  1249 D MI-SF   : updateScene mSetInputFlag status 0
+  10-18 16:16:29.761  1956  2486 D MIUIInput: [MotionEvent] publisher action=0x4, 1557137217, channel 'ba48297
+NavigationBar0 (server)'
+> 10-18 16:16:29.761  1956  2486 D MIUIInput: [MotionEvent] publisher action=0x0, 1557137217, channel 'a7f144f
+com.aistudio.edulens.vqrznx/com.example.MainActivity (server)'
+  10-18 16:16:29.762  1956  2486 D MIUIInput: [MotionEvent] publisher action=0x0, 1557137217, channel '[Gesture
+Monitor] miui-gesture (server)'
+  10-18 16:16:29.762  1049  1337 D RefreshRateConfigs: TouchBoost - choose Fps: 120.00 Hz
+  10-18 16:16:29.815  1049  1049 I MI-SF   : surfaceflinger setAffinity mode=0
+> 10-18 16:16:29.831  1956  2486 D MIUIInput: [MotionEvent] publisher action=0x1, 1557137289, channel 'a7f144f
+com.aistudio.edulens.vqrznx/com.example.MainActivity (server)'
+  10-18 16:16:29.832  1956  2486 D MIUIInput: [MotionEvent] publisher action=0x1, 1557137289, channel '[Gesture
+Monitor] miui-gesture (server)'
+  10-18 16:16:30.058 31674 31674 W TooltipLifecycleManager: TooltipLifecycleManager.dismissTooltips():152 Tooltip with
+id undo_access_point_promotion_banner not found in tooltipManager.
+  10-18 16:16:30.466 17493 17493 W Looper  : PerfMonitor doFrame : time=6ms vsyncFrame=0 latency=621ms procState=-1
+historyMsgCount=2 (msgIndex=1 wall=621ms seq=599 late=7ms h=android.view.Choreographer$FrameHandler
+c=android.view.Choreographer$FrameDisplayEventReceiver)
+> 10-18 16:16:30.482 17493 17493 I System.out: EDULENS_AUTH: Login error = HTTP 401 UNAUTHORIZED
+> 10-18 16:16:30.482 17493 17493 W System.err: retrofit2.HttpException: HTTP 401 UNAUTHORIZED
+> 10-18 16:16:30.482 17493 17493 W System.err: 	at
+retrofit2.KotlinExtensions$await$2$2.onResponse(KotlinExtensions.kt:53)
+> 10-18 16:16:30.483 17493 17493 W System.err: 	at retrofit2.OkHttpCall$1.onResponse(OkHttpCall.java:164)
+> 10-18 16:16:30.483 17493 17493 W System.err: 	at okhttp3.internal.connection.RealCall$AsyncCall.run(RealCall.kt:519)
+  10-18 16:16:30.483 17493 17493 W System.err: 	at
+java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1100)
+  10-18 16:16:30.483 17493 17493 W System.err: 	at
+java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:624)
+  10-18 16:16:44.755 10684 25672 I Auth    : (REDACTED) [GetToken] GetToken failed for app=%s with userRecoverable
+status: %s
+> 10-18 16:16:44.756 10684 25672 W Auth    : [ChimeraGetToken] exception while trying to fetch auth tokens for
+app=com.google.android.gsf, scope=oauth2:https://www.googleapis.com/auth/googleplay [CONTEXT service_id=153 ]
+  10-18 16:16:44.756 10684 25672 W Auth    : akvc: GetToken failed with status code and recovery intent:
+BadAuthentication
+  10-18 16:16:44.756 10684 25672 W Auth    : 	at akvh.b(:com.google.android.gms@263737029@26.37.37
+(190400-994713346):323)
+  10-18 16:16:51.863  1049  1049 I MI-SF   : surfaceflinger setreAffinity reTid=1260
+> 10-18 16:16:51.922  8248  9316 D collectorManager: ThermalScenarioValue setForegroundCounts:
+com.aistudio.edulens.vqrznx
+  10-18 16:16:51.923  8248  9316 D collectorManager: ThermalScenarioValue setFloatCounts: NULL
+  10-18 16:16:51.923  8248  9316 D collectorManager: ThermalScenarioValue setTemp: 38
+  10-18 16:17:00.016  3048  3048 E ReflectUtils: invokeObject
+> 10-18 16:17:00.016  3048  3048 E ReflectUtils: java.lang.reflect.InvocationTargetException
+  10-18 16:17:00.016  3048  3048 E ReflectUtils: 	at java.lang.reflect.Method.invoke(Native Method)
+  10-18 16:17:00.016  3048  3048 E ReflectUtils: 	at
+com.miui.clock.utils.ReflectUtils.invokeObject(ReflectUtils.java:31)
+  10-18 16:17:00.016  3048  3048 E ReflectUtils: 	at com.android.internal.os.ZygoteInit.main(ZygoteInit.java:954)
+> 10-18 16:17:00.016  3048  3048 E ReflectUtils: Caused by: android.content.pm.PackageManager$NameNotFoundException:
+com.mi.health
+  10-18 16:17:00.016  3048  3048 E ReflectUtils: 	at
+android.app.ApplicationPackageManager.getPackageInfoAsUser(ApplicationPackageManager.java:254)
+  10-18 16:17:00.016  3048  3048 E ReflectUtils: 	at
+android.app.ApplicationPackageManager.getPackageInfoAsUser(ApplicationPackageManager.java:242)
+  10-18 16:17:15.635  1956  2672 I SmartPower.com.xiaomi.discover/10152(3906): background->idle(3003ms) R(broadcast
+start Intent { act=android.intent.action.BATTERY_CHANGED flg=0x60000010 (has extras) }) adj=500.
+> 10-18 16:17:15.749 15256 18546 W statsig::Http: android.system.GaiException: android_getaddrinfo failed: EAI_NODATA
+(No address associated with hostname)
+  10-18 16:17:15.821  3028  3028 I MiuiPhoneUtils: getOperatorNumeric phone:0 numeric:40445
+  10-18 16:17:15.823  3028  3028 I EsimManager: getEidFromSlotId cardId=899192xxxxxxxxxxx24
+  10-18 16:17:18.192 20543 20543 I adbd    : adbd service requested 'reverse:list-forward'
+> 10-18 16:17:18.242 20543 20543 I adbd    : adbd service requested 'shell,v2,raw:dumpsys package
+com.aistudio.edulens.vqrznx'
+  10-18 16:17:18.443 20543 20543 I adbd    : adbd service requested 'shell,v2,raw:dumpsys activity activities'
+  10-18 16:17:19.500   965 13324 I WifiHAL : event received NL80211_CMD_VENDOR, vendor_id = 0x1374, subcmd = 0xd
+  10-18 16:17:20.072 10684 10669 I NearbySharing: Network state changed: NetworkState(isRestricted=false,
+isOnline=true, isCongested=false, isMetered=false, isWifiConnected=true)
+> 10-18 16:17:20.488 29514 29514 W Finsky  : [2] STU: Failed to get storage stats for package
+'com.google.mainline.primary.libs' (1601: Error getting stats: android.content.pm.PackageManager.NameNotFoundException)
+  10-18 16:17:20.887  1049  1049 I MI-SF   : surfaceflinger setAffinity mode=0
+  10-18 16:17:20.910 10684 17449 I AlarmManager: setExactAndAllowWhileIdle [name: FcmRetry type: 2 triggerAtMillis:
+2539761845]
+  10-18 16:17:20.933  1956  1983 D CompatibilityInfo: applicationScale - 1.0
+> 10-18 16:17:20.937 29514 29514 W Finsky  : [2] STU: Failed to get storage stats for package
+'com.google.android.appsearch' (1601: Error getting stats: android.content.pm.PackageManager.NameNotFoundException)
+> 10-18 16:17:20.948 29514 29514 W Finsky  : [2] STU: Failed to get storage stats for package 'com.google.android.art'
+(1601: Error getting stats: android.content.pm.PackageManager.NameNotFoundException)
+  10-18 16:17:20.949  1956  2521 I MiuiNetworkPolicy: updateUidState uid = 10087, uidState = 19
+  10-18 16:17:20.956  1956  6321 D CompatibilityInfo: mCompatibilityFlags - 0
+  10-18 16:17:21.022  3028  3065 D ExtPhoneCallbackBase: UNIMPLEMENTED: onSignalStrength: slotId = 0 token = Token: -1
+statusStatus: 1 signalStrength = SignalStrength: Rsrp: -32768 Snr: -32768
+> 10-18 16:17:21.023 29514 29514 W Finsky  : [2] STU: Failed to get storage stats for package
+'com.google.android.mediaprovider' (1601: Error getting stats: android.content.pm.PackageManager.NameNotFoundException)
+  10-18 16:17:21.023  2981  3317 D QtiRadioProxy: onSignalStrength: Responding back for transaction = null
+  10-18 16:17:21.023  3028  3028 W Settings: Setting airplane_mode_on has moved from android.provider.Settings.System
+to android.provider.Settings.Global, returning read-only value.
+  10-18 16:17:21.055  3048  3428 D FiveGServiceClient: update5GIcon FiveGServiceState: mBearerAllocationStatus=0,
+mPlmn=1, mUpperLayerInd=1, mDcnr=1, mLevel=0, mNrConfigType=0, mIconGroup=IconGroup(5Ge), mNrIconType=1,
+mIsUserFiveGEnabled=true, mIsDualNrEnabled=false, cmccSim=false
+> 10-18 16:17:21.112 29514 29514 W Finsky  : [2] STU: Failed to get storage stats for package
+'com.google.android.resolv' (1601: Error getting stats: android.content.pm.PackageManager.NameNotFoundException)
+> 10-18 16:17:21.150 29514 29514 W Finsky  : [2] STU: Failed to get storage stats for package
+'com.google.android.media' (1601: Error getting stats: android.content.pm.PackageManager.NameNotFoundException)
+> 10-18 16:17:21.463 29514 29514 W Finsky  : [2] STU: Failed to get storage stats for package
+'com.google.android.sdkext' (1601: Error getting stats: android.content.pm.PackageManager.NameNotFoundException)
+> 10-18 16:17:21.482 29514 29514 W Finsky  : [2] STU: Failed to get storage stats for package
+'com.google.android.adservices' (1601: Error getting stats: android.content.pm.PackageManager.NameNotFoundException)
+> 10-18 16:17:21.483 29514 29514 W Finsky  : [2] STU: Failed to get storage stats for package
+'com.google.android.tethering' (1601: Error getting stats: android.content.pm.PackageManager.NameNotFoundException)
+  10-18 16:17:21.501   965 13324 I WifiHAL : event received NL80211_CMD_VENDOR, vendor_id = 0x1374, subcmd = 0xd
+  10-18 16:17:21.502  1685  1685 I cnss-daemon: nl80211 response handler invoked
+  10-18 16:17:21.502  1685  1685 I cnss-daemon: nl80211_response_handler: cmd 103, vendorID 4980, subcmd 13  received
+> 10-18 16:17:21.659 29514 29514 W Finsky  : [2] STU: Failed to get storage stats for package
+'com.google.android.cellbroadcast' (1601: Error getting stats: android.content.pm.PackageManager.NameNotFoundException)
+  10-18 16:17:21.884  3028  3028 I MiuiPhoneUtils: getOperatorNumeric phone:0 numeric:40445
+  10-18 16:17:21.886  3028  3028 I EsimManager: getEidFromSlotId cardId=899192xxxxxxxxxxx24
+  10-18 16:17:21.909 10684 10684 D BoundBrokerSvc: onRebind: Intent {
+act=com.google.android.gms.libs.gmscorelogger.service.START dat=chimera-action:/...
+cmp=com.google.android.gms/.chimera.PersistentDirectBootAwareApiService }
+> 10-18 16:17:21.987 29514 29514 W Finsky  : [2] STU: Failed to get storage stats for package
+'com.google.android.tzdata4' (1601: Error getting stats: android.content.pm.PackageManager.NameNotFoundException)
+> 10-18 16:17:22.061 29514 29514 W Finsky  : [2] STU: Failed to get storage stats for package
+'com.google.android.permission' (1601: Error getting stats: android.content.pm.PackageManager.NameNotFoundException)
+> 10-18 16:17:22.512 29514 29514 W Finsky  : [2] STU: Failed to get storage stats for package
+'com.google.android.media.swcodec' (1601: Error getting stats: android.content.pm.PackageManager.NameNotFoundException)
+  10-18 16:17:22.584  1956  2672 I SmartPower.com.google.android.apps.messaging/10235(29474): background->idle(3003ms)
+R(content provider start ContentProviderRecord{d031fd4 u0
+com.google.android.apps.messaging/.shared.datamodel.provider.sharedstorage.SharedStorageProvider}) adj=200.
+  10-18 16:17:22.594  8253  8788 W Settings: Setting device_provisioned has moved from
+android.provider.Settings.Secure to android.provider.Settings.Global.
+  10-18 16:17:22.628  1049  1049 I MI-SF   : surfaceflinger setreAffinity reTid=1260
+> 10-18 16:17:22.681 29514 29514 W Finsky  : [2] STU: Failed to get storage stats for package
+'com.google.android.adbd' (1601: Error getting stats: android.content.pm.PackageManager.NameNotFoundException)
+> 10-18 16:17:22.738 29514 29514 W Finsky  : [2] STU: Failed to get storage stats for package
+'com.google.android.conscrypt' (1601: Error getting stats: android.content.pm.PackageManager.NameNotFoundException)
+> 10-18 16:17:22.860 29514 29514 W Finsky  : [2] STU: Failed to get storage stats for package
+'com.google.android.neuralnetworks' (1601: Error getting stats:
+android.content.pm.PackageManager.NameNotFoundException)
+> 10-18 16:17:22.902 29514 29514 W Finsky  : [2] STU: Failed to get storage stats for package
+'com.google.android.ipsec' (1601: Error getting stats: android.content.pm.PackageManager.NameNotFoundException)
+> 10-18 16:17:22.933 29514 29514 W Finsky  : [2] STU: Failed to get storage stats for package
+'com.google.android.ondevicepersonalization' (1601: Error getting stats:
+android.content.pm.PackageManager.NameNotFoundException)
+  10-18 16:17:23.029  1956  2672 I SmartPower.com.android.vending/10211(29514): background->idle(3001ms) R(service
+create com.android.vending/com.google.android.finsky.scheduler.process.mainimpl.PhoneskyJobServiceMain) adj=250.
+  10-18 16:17:23.100 10684 11486 I NearbySharing: Network state changed: NetworkState(isRestricted=false,
+isOnline=true, isCongested=false, isMetered=false, isWifiConnected=true)
+  10-18 16:17:23.112 10684 11486 I NearbySharing: Network state changed: NetworkState(isRestricted=false,
+isOnline=true, isCongested=false, isMetered=false, isWifiConnected=true)
+> 10-18 16:17:23.116 29514 29514 W Finsky  : [2] STU: Failed to get storage stats for package
+'com.google.android.extservices' (1601: Error getting stats: android.content.pm.PackageManager.NameNotFoundException)
+> 10-18 16:17:23.341 29514 29514 W Finsky  : [2] STU: Failed to get storage stats for package
+'com.google.android.os.statsd' (1601: Error getting stats: android.content.pm.PackageManager.NameNotFoundException)
+> 10-18 16:17:23.372 29514 29514 W Finsky  : [2] STU: Failed to get storage stats for package
+'com.google.android.scheduling' (1601: Error getting stats: android.content.pm.PackageManager.NameNotFoundException)
+  10-18 16:17:23.390 29514 29514 I Finsky  : [2] App states replicator found 64 unowned apps
+  10-18 16:17:23.407  1049  1049 I MI-SF   : surfaceflinger setAffinity mode=0
+  10-18 16:17:23.473 10684 10693 I Auth    : (REDACTED) [GetToken] GetToken failed for app=%s with userRecoverable
+status: %s
+> 10-18 16:17:23.473 10684 10693 W Auth    : [ChimeraGetToken] exception while trying to fetch auth tokens for
+app=com.google.android.gsf, scope=oauth2:https://www.googleapis.com/auth/googleplay [CONTEXT service_id=153 ]
+  10-18 16:17:23.473 10684 10693 W Auth    : akvc: GetToken failed with status code and recovery intent:
+BadAuthentication
+  10-18 16:17:23.473 10684 10693 W Auth    : 	at akvh.b(:com.google.android.gms@263737029@26.37.37
+(190400-994713346):323)
+
+
+PS N:\edulens\SVIT_Smart_Attendance_App> Write-Host "`n========== 9. RECENT BUILD OUTPUT ==========" -ForegroundColor Cyan
+
+========== 9. RECENT BUILD OUTPUT ==========
+PS N:\edulens\SVIT_Smart_Attendance_App> $Apk = Join-Path $Root "app\build\outputs\apk\debug\app-debug.apk"
+PS N:\edulens\SVIT_Smart_Attendance_App> if (Test-Path $Apk) {
+    Get-Item $Apk | Select-Object FullName, Length, LastWriteTime
+} else {
+    Write-Host "Debug APK not found at expected path."
+}
+
+FullName                                                                         Length LastWriteTime
+--------                                                                         ------ -------------
+N:\edulens\SVIT_Smart_Attendance_App\app\build\outputs\apk\debug\app-debug.apk 68572115 10/18/2026 4:09:40 PM
+
+
+PS N:\edulens\SVIT_Smart_Attendance_App> Stop-Transcript | Out-Null
+**********************
+Windows PowerShell transcript end
+End time: 20261018161732
+**********************
