@@ -67,15 +67,8 @@ class EduLensMLCore:
         # INSIGHTFACE
         # =========================================================
 
-        self.face_app = FaceAnalysis(
-            name="buffalo_l",
-            providers=["CPUExecutionProvider"]
-        )
-
-        self.face_app.prepare(
-            ctx_id=0,
-            det_size=(640, 640)
-        )
+        # Load the heavy model only when face processing is requested.
+        self.face_app = None
 
         # =========================================================
         # STUDENT EMBEDDING GALLERY
@@ -89,6 +82,18 @@ class EduLensMLCore:
         self.load_embeddings()
 
     # =============================================================
+    def _ensure_face_app(self):
+        """Initialize InsightFace on first use."""
+        if self.face_app is None:
+            print("EDULENS_ML: Loading face recognition model...")
+            self.face_app = FaceAnalysis(
+                name="buffalo_l",
+                providers=["CPUExecutionProvider"]
+            )
+            self.face_app.prepare(ctx_id=0, det_size=(640, 640))
+            print("EDULENS_ML: Face model ready.")
+        return self.face_app
+
     # EMBEDDING STORAGE
     # =============================================================
 
@@ -353,7 +358,7 @@ class EduLensMLCore:
 
             return []
 
-        faces = self.face_app.get(
+        faces = self._ensure_face_app().get(
             image
         )
 
@@ -562,7 +567,7 @@ class EduLensMLCore:
 
                 continue
 
-            faces = self.face_app.get(
+            faces = self._ensure_face_app().get(
                 image
             )
 
@@ -740,7 +745,7 @@ class EduLensMLCore:
                 if image is None:
                     continue
 
-                faces = self.face_app.get(
+                faces = self._ensure_face_app().get(
                     image
                 )
 
