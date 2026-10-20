@@ -12,3 +12,6 @@ firebase-admin==6.4.0
 insightface==0.7.3
 onnxruntime==1.18.1
 gunicorn==23.0.0
+psycopg[binary]>=3.2,<4
+
+supabase>=2,<3
