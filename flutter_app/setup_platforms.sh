@@ -17,6 +17,13 @@ if ! grep -q 'android.permission.INTERNET' "$MANIFEST"; then
   sed -i.bak 's#<application#<uses-permission android:name="android.permission.INTERNET"/>\n    <application#' "$MANIFEST" && rm -f "$MANIFEST.bak"
 fi
 
+# Android lint can crash on third-party plugin sources during release builds; skip it.
+if [ -f android/app/build.gradle.kts ] && ! grep -q checkReleaseBuilds android/app/build.gradle.kts; then
+  printf '\nandroid {\n    lint {\n        checkReleaseBuilds = false\n        abortOnError = false\n    }\n}\n' >> android/app/build.gradle.kts
+elif [ -f android/app/build.gradle ] && ! grep -q checkReleaseBuilds android/app/build.gradle; then
+  printf '\nandroid {\n    lint {\n        checkReleaseBuilds false\n        abortOnError false\n    }\n}\n' >> android/app/build.gradle
+fi
+
 PLIST=ios/Runner/Info.plist
 if [ -f "$PLIST" ] && ! grep -q NSCameraUsageDescription "$PLIST"; then
   /usr/libexec/PlistBuddy -c "Add :NSCameraUsageDescription string 'Take classroom photos for attendance'" "$PLIST" 2>/dev/null || true
