@@ -1,0 +1,9 @@
+.venv*/
+venv*/
+__pycache__/
+*.db*
+*.pkl
+uploads/
+dataset/
+data/
+config/*service-account*.json

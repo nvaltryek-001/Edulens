@@ -6,6 +6,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -88,6 +89,26 @@ fun AttendanceScreen(
 
     val sessionError by
         viewModel.sessionError.collectAsState()
+
+    val reviewOpen by
+        viewModel.reviewOpen.collectAsState()
+
+    val reviewStudents by
+        viewModel.reviewStudents.collectAsState()
+
+    val presentIds by
+        viewModel.presentIds.collectAsState()
+
+    val confirmMessage by
+        viewModel.confirmMessage.collectAsState()
+
+    var manualReason by remember {
+        mutableStateOf("")
+    }
+
+    var showSaveConfirm by remember {
+        mutableStateOf(false)
+    }
 
     val context =
         LocalContext.current
@@ -897,6 +918,150 @@ fun AttendanceScreen(
     }
 
     // ============================================================
+    // TEACHER REVIEW: CHECK / UNCHECK, THEN SAVE
+    // ============================================================
+
+    if (reviewOpen) {
+
+        val presentCount =
+            reviewStudents.count { it.studentId in presentIds }
+
+        AlertDialog(
+
+            onDismissRequest = {
+                viewModel.closeReview()
+            },
+
+            title = {
+                Text("Review attendance")
+            },
+
+            text = {
+
+                Column {
+
+                    Text(
+                        "On roster: ${reviewStudents.size}   " +
+                            "Present: $presentCount   " +
+                            "Absent: ${reviewStudents.size - presentCount}",
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.SemiBold
+                    )
+
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        modifier = Modifier.padding(vertical = 8.dp)
+                    ) {
+                        OutlinedButton(onClick = { viewModel.markAll(true) }) {
+                            Text("All present")
+                        }
+                        OutlinedButton(onClick = { viewModel.markAll(false) }) {
+                            Text("All absent")
+                        }
+                    }
+
+                    LazyColumn(
+                        modifier = Modifier.heightIn(max = 360.dp)
+                    ) {
+                        items(reviewStudents) { student ->
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Checkbox(
+                                    checked = student.studentId in presentIds,
+                                    onCheckedChange = {
+                                        viewModel.togglePresent(student.studentId)
+                                    }
+                                )
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(
+                                        student.name,
+                                        style = MaterialTheme.typography.bodyMedium
+                                    )
+                                    Text(
+                                        (student.usn ?: student.studentId) +
+                                            if (student.detected) "  ·  camera match" else "  ·  not seen",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            }
+                        }
+                    }
+
+                    OutlinedTextField(
+                        value = manualReason,
+                        onValueChange = { manualReason = it },
+                        label = { Text("Reason for manual changes (optional)") },
+                        singleLine = true,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(top = 8.dp)
+                    )
+                }
+            },
+
+            confirmButton = {
+                Button(
+                    enabled = !sessionLoading,
+                    onClick = { showSaveConfirm = true }
+                ) {
+                    Text("Save attendance")
+                }
+            },
+
+            dismissButton = {
+                TextButton(onClick = { viewModel.closeReview() }) {
+                    Text("Back")
+                }
+            }
+        )
+    }
+
+    if (showSaveConfirm) {
+
+        val presentCount =
+            reviewStudents.count { it.studentId in presentIds }
+
+        AlertDialog(
+            onDismissRequest = { showSaveConfirm = false },
+            title = { Text("Save and lock?") },
+            text = {
+                Text(
+                    "Present: $presentCount   Absent: ${reviewStudents.size - presentCount}   " +
+                        "Total: ${reviewStudents.size}\n\n" +
+                        "The register will be locked and parents of absent students will be notified."
+                )
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        showSaveConfirm = false
+                        viewModel.confirmAttendance(manualReason) {
+                            manualReason = ""
+                        }
+                    }
+                ) { Text("Save") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showSaveConfirm = false }) { Text("Cancel") }
+            }
+        )
+    }
+
+    confirmMessage?.let { message ->
+        AlertDialog(
+            onDismissRequest = { viewModel.clearConfirmMessage() },
+            title = { Text("Attendance saved") },
+            text = { Text(message) },
+            confirmButton = {
+                Button(onClick = { viewModel.clearConfirmMessage() }) { Text("OK") }
+            }
+        )
+    }
+
+    // ============================================================
     // END SESSION CONFIRMATION
     // ============================================================
 
@@ -915,14 +1080,14 @@ fun AttendanceScreen(
             title = {
 
                 Text(
-                    "End Attendance Session?"
+                    "Finish and review?"
                 )
             },
 
             text = {
 
                 Text(
-                    "The current attendance session will be ended. You will not be able to add more attendance to this session."
+                    "Scanning stops and the class list opens. Check or uncheck students, then save. Nothing is saved until you confirm."
                 )
             },
 
@@ -932,12 +1097,14 @@ fun AttendanceScreen(
 
                     onClick = {
 
-                        endSession()
+                        stopScanning()
+                        showEndSessionDialog = false
+                        viewModel.openReview()
                     }
                 ) {
 
                     Text(
-                        "End Session"
+                        "Review list"
                     )
                 }
             },

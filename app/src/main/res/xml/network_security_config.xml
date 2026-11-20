@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Pilot setting: plain HTTP is allowed so the app can reach the EduLens server
+  by its campus Wi-Fi IP (e.g. http://192.168.1.50:5000/) before HTTPS is set up.
+  For college-wide rollout put the server behind Nginx with HTTPS and change
+  cleartextTrafficPermitted to "false".
+-->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="true" />
+</network-security-config>

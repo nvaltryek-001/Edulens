@@ -76,6 +76,7 @@ fun EnrollmentScreen(
     var section by remember { mutableStateOf("") }
     var email by remember { mutableStateOf("") }
     var phone by remember { mutableStateOf("") }
+    var parentPhone by remember { mutableStateOf("") }
 
     var isCapturing by remember { mutableStateOf(false) }
     var captureProgress by remember { mutableStateOf(0f) }
@@ -522,6 +523,25 @@ fun EnrollmentScreen(
 
                 Spacer(
                     modifier =
+                        Modifier.height(16.dp)
+                )
+
+                OutlinedTextField(
+                    value = parentPhone,
+                    onValueChange = {
+                        parentPhone = it
+                    },
+                    label = {
+                        Text("Parent Mobile (for absence SMS)")
+                    },
+                    modifier =
+                        Modifier.fillMaxWidth(),
+                    singleLine = true,
+                    enabled = !isCapturing
+                )
+
+                Spacer(
+                    modifier =
                         Modifier.height(24.dp)
                 )
 
@@ -776,6 +796,11 @@ fun EnrollmentScreen(
 
                                         "phoneNumber" to
                                             phone.toRequestBody(
+                                                textMediaType
+                                            ),
+
+                                        "parentPhone" to
+                                            parentPhone.toRequestBody(
                                                 textMediaType
                                             )
                                     )

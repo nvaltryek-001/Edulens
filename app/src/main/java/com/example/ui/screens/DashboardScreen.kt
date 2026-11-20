@@ -308,7 +308,7 @@ var profileError by remember {
                                     authorization,
 
                                 threshold =
-                                    75.0,
+                                    85.0,
 
                                 department =
                                     selectedDepartment
@@ -1732,7 +1732,7 @@ var profileError by remember {
                             Text(
 
                                 text =
-                                    "Below 75%",
+                                    "Below 85%",
 
                                 style =
                                     MaterialTheme
@@ -1841,7 +1841,7 @@ var profileError by remember {
                                         Text(
 
                                             text =
-                                                "No students below 75%",
+                                                "No students below 85%",
 
                                             fontWeight =
                                                 FontWeight.Medium

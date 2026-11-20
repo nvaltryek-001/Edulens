@@ -22,6 +22,12 @@ android {
 
     testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
+    // EduLens server address. Set EDULENS_API_URL in gradle.properties, e.g.
+    //   EDULENS_API_URL=http://192.168.1.50:5000/
+    // Default 10.0.2.2 = your laptop when running in the Android emulator.
+    val apiUrl = (project.findProperty("EDULENS_API_URL") as String?) ?: "http://10.0.2.2:5000/"
+    buildConfigField("String", "API_BASE_URL", "\"$apiUrl\"")
+
      
   }
 

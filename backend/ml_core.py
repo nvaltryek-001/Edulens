@@ -69,6 +69,10 @@ class EduLensMLCore:
 
         self.face_app = FaceAnalysis(
             name="buffalo_l",
+            root=os.environ.get(
+                "INSIGHTFACE_HOME",
+                os.path.expanduser("~/.insightface")
+            ),
             providers=["CPUExecutionProvider"]
         )
 
@@ -853,7 +857,8 @@ class EduLensMLCore:
         student_database: Dict[
             str,
             Dict[str, Any]
-        ]
+        ],
+        allowed_student_ids=None
     ) -> List[Dict[str, Any]]:
         """
         Detect and recognize all faces.
@@ -960,6 +965,14 @@ class EduLensMLCore:
             for student_id, embeddings in (
                 self.student_embeddings.items()
             ):
+
+                # Compare only with the selected section's roster
+                if (
+                    allowed_student_ids is not None
+                    and student_id not in allowed_student_ids
+                ):
+                    continue
+
 
                 best_student_similarity = -1.0
 
