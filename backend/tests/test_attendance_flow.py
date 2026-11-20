@@ -219,5 +219,69 @@ class AttendanceFlowTest(unittest.TestCase):
         return {'Authorization': 'Bearer ' + r.json['token']}
 
 
+    def test_real_roster_logins_and_student_alerts(self):
+        import io
+        from services import parent_notifier as pn
+        csv_text = ('usn,name,department,semester,section,email,phone_number,parent_name,parent_phone,parent_email\n'
+                    '1VA23CD201,Test Real One,CSD,7,C,one.23ds@saividya.ac.in,9876500001,,,\n'
+                    '1VA23CD202,Test Real Two,CSD,7,C,two.23ds@saividya.ac.in,9876500002,,,\n')
+        r = self.c.post('/api/students/import', headers=self.admin,
+                        data={'file': (io.BytesIO(csv_text.encode()), 'roster.csv')}, content_type='multipart/form-data')
+        self.assertEqual(r.json['inserted'], 2, r.json)
+
+        r = self.c.post('/api/students/create-accounts', headers=self.admin, json={'section': 'C'})
+        self.assertEqual(r.json['created'], 2)
+        pw = {a['usn']: a['password'] for a in r.json['accounts']}
+        # second run creates nothing
+        self.assertEqual(self.c.post('/api/students/create-accounts', headers=self.admin, json={'section': 'C'}).json['created'], 0)
+
+        # login with college e-mail (any case) and with USN
+        r = self.c.post('/login', json={'username': 'ONE.23ds@saividya.ac.in', 'password': pw['1VA23CD201']})
+        self.assertEqual(r.status_code, 200, r.json)
+        self.assertEqual(r.json['username'], '1VA23CD201')
+        stu = {'Authorization': 'Bearer ' + r.json['token']}
+        self.assertEqual(self.c.post('/login', json={'username': '1VA23CD202', 'password': pw['1VA23CD202']}).status_code, 200)
+
+        # change password
+        r = self.c.post('/api/me/password', headers=stu, json={'currentPassword': pw['1VA23CD201'], 'newPassword': 'NewPass#2026'})
+        self.assertTrue(r.json['success'])
+        self.assertEqual(self.c.post('/login', json={'username': '1VA23CD201', 'password': 'NewPass#2026'}).status_code, 200)
+
+        # no parent number -> absence SMS goes to the student's own phone, with student wording
+        sid = self.start(self.prof_a, 'C', subject='BCS703').json['session']['sessionId']
+        self.c.post('/api/attendance/confirm', headers=self.prof_a, json={'sessionId': sid, 'presentStudentIds': ['1VA23CD201']})
+        import threading
+        for t in threading.enumerate():
+            if t is not threading.current_thread() and t.daemon:
+                t.join(timeout=5)
+        log = self.c.get('/api/notifications/parents?studentId=1VA23CD202', headers=self.prof_a).json['notifications']
+        self.assertEqual(log[0]['recipient'], '9876500002')
+        self.assertTrue(log[0]['message'].startswith('Dear Test Real Two'))
+
+        # weekly summary e-mail (SMTP stubbed)
+        sent = []
+        notifier = pn.ParentNotifier(edulens.get_db_connection)
+        notifier.email_enabled = True
+        notifier._send_email = lambda to, subj, body: (sent.append((to, body)) or (True, None))
+        out = notifier.notify_weekly_summaries('2026-W47', section='C')
+        self.assertEqual({o['recipient'] for o in out}, {'one.23ds@saividya.ac.in', 'two.23ds@saividya.ac.in'})
+        self.assertIn('BCS703', sent[0][1])
+        self.assertEqual(notifier.notify_weekly_summaries('2026-W47', section='C'), [])  # once per week
+
+        # SMS through the user's own Android phone
+        calls = []
+        pn._post_orig = pn._post
+        pn._post = lambda url, **kw: (calls.append((url, kw)) or (200, '{"state":"Pending"}'))
+        try:
+            os.environ.update(ANDROID_GATEWAY_URL='http://192.168.1.20:8080', ANDROID_GATEWAY_USER='u', ANDROID_GATEWAY_PASSWORD='p')
+            g = pn.ParentNotifier(edulens.get_db_connection)
+            g.sms_provider = 'android_gateway'
+            self.assertEqual(g._send_sms('9876500001', 'hello'), (True, None))
+            self.assertEqual(calls[0][0], 'http://192.168.1.20:8080/message')
+            self.assertEqual(calls[0][1]['json_body']['phoneNumbers'], ['+919876500001'])
+        finally:
+            pn._post = pn._post_orig
+
+
 if __name__ == '__main__':
     unittest.main()

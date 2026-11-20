@@ -55,6 +55,26 @@ ALLOWED_IMAGE_EXTENSIONS = {'.jpg', '.jpeg', '.png'}
 app.config['MAX_CONTENT_LENGTH'] = 25 * 1024 * 1024  # 25 MB per request
 
 
+def find_user_by_student_login(login):
+    login = str(login or '').strip().lower()
+    if not login:
+        return None
+    conn = get_db_connection()
+    try:
+        student = conn.execute(
+            'SELECT student_id FROM students WHERE LOWER(TRIM(email)) = ? OR LOWER(usn) = ?',
+            (login, login)
+        ).fetchone()
+        if not student:
+            return None
+        return conn.execute(
+            "SELECT * FROM users WHERE role = 'student' AND student_id = ?",
+            (student['student_id'],)
+        ).fetchone()
+    finally:
+        conn.close()
+
+
 def allowed_image(filename):
     return os.path.splitext(filename or '')[1].lower() in ALLOWED_IMAGE_EXTENSIONS
 
@@ -223,6 +243,10 @@ def login():
         conn.close()
 
     if not user:
+        # Students may sign in with their USN or college e-mail
+        user = find_user_by_student_login(data['username'])
+
+    if not user:
         return jsonify({
             'message': 'Invalid username or password'
         }), 401
@@ -239,7 +263,8 @@ def login():
 
         return jsonify({
             'token': token,
-            'role': user['role']
+            'role': user['role'],
+            'username': user['username']
         })
 
     return jsonify({

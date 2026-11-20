@@ -1,6 +1,9 @@
 """
-Weekly job: SMS/e-mail parents of every student below 85% in any subject.
-Each parent gets at most one message per student, subject and ISO week.
+Weekly job (run every Monday):
+  1. SMS/e-mail parents (or the student, if no parent contact) of everyone
+     below 85% in any subject - once per student, subject and ISO week.
+  2. E-mail every student their subject-wise attendance summary
+     (needs PARENT_EMAIL_ENABLED=true and SMTP settings).
 
 Cron (every Monday 09:00):
   0 9 * * 1  cd /path/to/backend && python send_shortage_alerts.py
@@ -30,6 +33,12 @@ def main():
     )
     sent = sum(1 for r in results if r['sent'])
     print(f'Shortage alerts: {sent} sent, {len(results) - sent} failed')
+
+    weekly = ParentNotifier(get_db_connection).notify_weekly_summaries(
+        f'{year}-W{week:02d}', department=args.department, semester=args.semester, section=args.section)
+    ok = sum(1 for r in weekly if r['sent'])
+    print(f'Weekly student e-mails: {ok} sent, {len(weekly) - ok} failed')
+    results += weekly
     for r in results:
         if not r['sent']:
             print(f"  FAILED {r['studentId']} {r['channel']} {r['recipient']}: {r['error']}")
