@@ -14,8 +14,10 @@ object ApiClient {
     // Development laptop IP address on the current Wi-Fi network
     // ============================================================
 
-    
-private const val BASE_URL = "http://10.0.2.2:5000/"
+    // Set EDULENS_API_URL in gradle.properties (see app/build.gradle.kts)
+    private val BASE_URL: String = com.example.BuildConfig.API_BASE_URL.let {
+        if (it.endsWith("/")) it else "$it/"
+    }
     // ============================================================
     // MOSHI
     // ============================================================

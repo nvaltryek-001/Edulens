@@ -278,6 +278,48 @@ data class SessionListResponse(
     val sessions: List<SessionInfo> = emptyList()
 )
 // ============================================================
+// TEACHER REVIEW + CONFIRM
+// ============================================================
+
+data class ReviewStudent(
+    val studentId: String = "",
+    val name: String = "",
+    val usn: String? = null,
+    val detected: Boolean = false,
+    val confidence: Double? = null,
+    val savedStatus: String? = null
+)
+
+data class SessionReviewResponse(
+    val success: Boolean = false,
+    val session: SessionInfo? = null,
+    val rosterSize: Int = 0,
+    val detectedCount: Int = 0,
+    val students: List<ReviewStudent> = emptyList()
+)
+
+data class ConfirmAttendanceRequest(
+    val sessionId: Int,
+    val presentStudentIds: List<String>,
+    val manualReason: String = ""
+)
+
+data class ConfirmSummary(
+    val total: Int = 0,
+    val present: Int = 0,
+    val absent: Int = 0,
+    val manualAdded: List<String> = emptyList(),
+    val aiRejected: List<String> = emptyList()
+)
+
+data class ConfirmAttendanceResponse(
+    val success: Boolean = false,
+    val message: String = "",
+    val session: SessionInfo? = null,
+    val summary: ConfirmSummary? = null
+)
+
+// ============================================================
 // FLASK API SERVICE
 // ============================================================
 
@@ -426,7 +468,7 @@ interface FlaskApiService {
         authorization: String,
 
         @Query("threshold")
-        threshold: Double = 75.0,
+        threshold: Double = 85.0,
 
         @Query("department")
         department: String? = null,
@@ -479,4 +521,26 @@ interface FlaskApiService {
         @Header("Authorization")
         authorization: String
     ): SessionListResponse
+
+    // ========================================================
+    // TEACHER REVIEW + CONFIRM (writes Present + Absent, locks)
+    // ========================================================
+
+    @GET("api/sessions/{sessionId}/review")
+    suspend fun getSessionReview(
+        @Header("Authorization")
+        authorization: String,
+
+        @retrofit2.http.Path("sessionId")
+        sessionId: Int
+    ): SessionReviewResponse
+
+    @POST("api/attendance/confirm")
+    suspend fun confirmAttendance(
+        @Header("Authorization")
+        authorization: String,
+
+        @Body
+        request: ConfirmAttendanceRequest
+    ): ConfirmAttendanceResponse
 }
