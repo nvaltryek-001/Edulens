@@ -5,7 +5,9 @@ import android.content.Context
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.api.ApiClient
+import com.example.api.ConfirmAttendanceRequest
 import com.example.api.RecognizedStudent
+import com.example.api.ReviewStudent
 import com.example.api.StartSessionRequest
 import com.example.api.SessionInfo
 import com.example.data.AppDatabase
@@ -323,6 +325,172 @@ class AttendanceViewModel(
 
             } finally {
 
+                _sessionLoading.value = false
+            }
+        }
+    }
+
+    // ============================================================
+    // TEACHER REVIEW + CONFIRM
+    // Nothing is saved until the teacher confirms this list.
+    // ============================================================
+
+    private val _reviewOpen =
+        MutableStateFlow(false)
+
+    val reviewOpen: StateFlow<Boolean> =
+        _reviewOpen.asStateFlow()
+
+    private val _reviewStudents =
+        MutableStateFlow<List<ReviewStudent>>(emptyList())
+
+    val reviewStudents: StateFlow<List<ReviewStudent>> =
+        _reviewStudents.asStateFlow()
+
+    private val _presentIds =
+        MutableStateFlow<Set<String>>(emptySet())
+
+    val presentIds: StateFlow<Set<String>> =
+        _presentIds.asStateFlow()
+
+    private val _confirmMessage =
+        MutableStateFlow<String?>(null)
+
+    val confirmMessage: StateFlow<String?> =
+        _confirmMessage.asStateFlow()
+
+    fun openReview() {
+
+        viewModelScope.launch(Dispatchers.IO) {
+
+            _sessionLoading.value = true
+            _sessionError.value = null
+
+            try {
+
+                val token = getToken()
+                val session = _activeSession.value
+
+                if (token.isNullOrBlank() || session == null) {
+                    _sessionError.value =
+                        "No active attendance session."
+                    return@launch
+                }
+
+                val response =
+                    ApiClient
+                        .flaskApiService
+                        .getSessionReview(
+                            authorization = "Bearer $token",
+                            sessionId = session.sessionId
+                        )
+
+                if (response.success) {
+                    _reviewStudents.value = response.students
+                    _presentIds.value =
+                        response.students
+                            .filter { it.detected }
+                            .map { it.studentId }
+                            .toSet()
+                    _reviewOpen.value = true
+                } else {
+                    _sessionError.value =
+                        "Unable to load the class list for review."
+                }
+
+            } catch (e: Exception) {
+                e.printStackTrace()
+                _sessionError.value =
+                    "Unable to load review: " +
+                        (e.message ?: "Unknown error")
+            } finally {
+                _sessionLoading.value = false
+            }
+        }
+    }
+
+    fun togglePresent(studentId: String) {
+        val current = _presentIds.value
+        _presentIds.value =
+            if (studentId in current) current - studentId
+            else current + studentId
+    }
+
+    fun markAll(present: Boolean) {
+        _presentIds.value =
+            if (present) _reviewStudents.value.map { it.studentId }.toSet()
+            else emptySet()
+    }
+
+    fun closeReview() {
+        _reviewOpen.value = false
+    }
+
+    fun clearConfirmMessage() {
+        _confirmMessage.value = null
+    }
+
+    fun confirmAttendance(
+        manualReason: String,
+        onSuccess: () -> Unit = {}
+    ) {
+
+        viewModelScope.launch(Dispatchers.IO) {
+
+            _sessionLoading.value = true
+            _sessionError.value = null
+
+            try {
+
+                val token = getToken()
+                val session = _activeSession.value
+
+                if (token.isNullOrBlank() || session == null) {
+                    _sessionError.value =
+                        "No active attendance session."
+                    return@launch
+                }
+
+                val response =
+                    ApiClient
+                        .flaskApiService
+                        .confirmAttendance(
+                            authorization = "Bearer $token",
+                            request = ConfirmAttendanceRequest(
+                                sessionId = session.sessionId,
+                                presentStudentIds = _presentIds.value.toList(),
+                                manualReason = manualReason
+                            )
+                        )
+
+                if (response.success) {
+                    _activeSession.value = response.session
+                    _reviewOpen.value = false
+                    _confirmMessage.value = response.message
+                    repository.insertLog(
+                        LogEntry(
+                            event =
+                                "Attendance confirmed for session " +
+                                    session.sessionId + ": " +
+                                    response.message
+                        )
+                    )
+                    launch(Dispatchers.Main) {
+                        onSuccess()
+                    }
+                } else {
+                    _sessionError.value =
+                        response.message.ifBlank {
+                            "Unable to save attendance."
+                        }
+                }
+
+            } catch (e: Exception) {
+                e.printStackTrace()
+                _sessionError.value =
+                    "Unable to save attendance: " +
+                        (e.message ?: "Unknown error")
+            } finally {
                 _sessionLoading.value = false
             }
         }
