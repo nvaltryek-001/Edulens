@@ -166,6 +166,14 @@ class AttendanceFlowTest(unittest.TestCase):
         r = self.c.get('/api/low-attendance?department=CSD&semester=7&section=A', headers=self.prof_a)
         self.assertEqual(r.status_code, 200)
 
+        # per-subject shortage list
+        r = self.c.get('/api/shortage?section=A&subject=BCS701', headers=self.prof_a)
+        self.assertEqual([x['studentId'] for x in r.json['students']], ['S2'])
+
+        # roster list and web portal
+        self.assertEqual(self.c.get('/api/students?section=A', headers=self.prof_a).json['count'], 3)
+        self.assertEqual(self.c.get('/portal').status_code, 200)
+
         # shortage alerts: S2 (0%) is below 85%
         r = self.c.post('/api/notifications/parents/shortage', headers=self.prof_a, json={'section': 'A'})
         self.assertEqual(r.json['sent'], 1, r.json)

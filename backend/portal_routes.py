@@ -355,3 +355,96 @@ def list_assignments(current_user):
     finally:
         conn.close()
     return jsonify({'success': True, 'assignments': rows})
+
+
+# ------------------------------------------------------------------
+# ROSTER LIST (staff)
+# ------------------------------------------------------------------
+
+@portal.route('/api/students', methods=['GET'])
+@token_required
+def list_students(current_user):
+    if current_user['role'] not in STAFF_ROLES:
+        return jsonify({'success': False, 'error': 'Unauthorized'}), 403
+    query = '''
+        SELECT student_id, name, usn, department, semester, section, email,
+               parent_name, parent_phone, parent_email
+        FROM students WHERE 1 = 1
+    '''
+    params = []
+    for arg in ('department', 'semester', 'section'):
+        if request.args.get(arg):
+            query += f' AND CAST({arg} AS TEXT) = ?'
+            params.append(request.args[arg])
+    query += ' ORDER BY department, semester, section, usn'
+    conn = get_db_connection()
+    try:
+        rows = [dict(r) for r in conn.execute(query, params).fetchall()]
+    finally:
+        conn.close()
+    return jsonify({'success': True, 'count': len(rows), 'students': rows})
+
+
+# ------------------------------------------------------------------
+# WEB PORTAL (same server, any browser)
+# ------------------------------------------------------------------
+
+@portal.route('/portal', methods=['GET'])
+@portal.route('/', methods=['GET'])
+def web_portal():
+    from flask import send_from_directory
+    return send_from_directory(
+        os.path.join(os.path.dirname(os.path.abspath(__file__)), 'static', 'portal'),
+        'index.html'
+    )
+
+
+# ------------------------------------------------------------------
+# PER-SUBJECT SHORTAGE (VTU applies 85% to each course separately)
+# ------------------------------------------------------------------
+
+@portal.route('/api/shortage', methods=['GET'])
+@token_required
+def subject_shortage(current_user):
+    if current_user['role'] not in STAFF_ROLES:
+        return jsonify({'success': False, 'error': 'Unauthorized'}), 403
+    try:
+        threshold = float(request.args.get('threshold', MIN_PERCENT))
+    except ValueError:
+        return jsonify({'success': False, 'error': 'threshold must be a number'}), 400
+
+    query = '''
+        SELECT st.student_id, st.name, st.usn, st.department, st.semester, st.section,
+               st.parent_phone, s.subject,
+               SUM(CASE WHEN a.status = 'Present' THEN 1 ELSE 0 END) AS present,
+               COUNT(*) AS total
+        FROM attendance a
+        JOIN attendance_sessions s ON s.session_id = a.session_id
+        JOIN students st ON st.student_id = a.student_id
+        WHERE s.status = 'ENDED'
+    '''
+    params = []
+    for arg, col in (('department', 'st.department'), ('semester', 'st.semester'),
+                     ('section', 'st.section'), ('subject', 's.subject')):
+        if request.args.get(arg):
+            query += f' AND CAST({col} AS TEXT) = ?'
+            params.append(request.args[arg])
+    query += ' GROUP BY st.student_id, s.subject ORDER BY st.usn, s.subject'
+
+    conn = get_db_connection()
+    try:
+        rows = conn.execute(query, params).fetchall()
+    finally:
+        conn.close()
+
+    out = []
+    for r in rows:
+        pct, _, must = attendance_projection(r['present'], r['total'], threshold)
+        if pct < threshold:
+            out.append({
+                'studentId': r['student_id'], 'name': r['name'], 'usn': r['usn'],
+                'department': r['department'], 'semester': r['semester'], 'section': r['section'],
+                'subject': r['subject'], 'present': r['present'], 'total': r['total'],
+                'percent': pct, 'mustAttend': must, 'parentPhoneOnFile': bool(r['parent_phone']),
+            })
+    return jsonify({'success': True, 'threshold': threshold, 'count': len(out), 'students': out})

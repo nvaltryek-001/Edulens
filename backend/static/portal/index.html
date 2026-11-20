@@ -1,0 +1,682 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>EduLens · SVIT Attendance</title>
+<style>
+  :root {
+    --bg: #f5f6f8; --card: #fff; --ink: #1d2433; --muted: #5f6b7a; --line: #e2e6ec;
+    --brand: #8a1538; --brand-soft: #f6e8ed; --ok: #1e7a46; --ok-soft: #e5f4ea;
+    --warn: #a35c00; --warn-soft: #fff3e0; --bad: #b3261e; --bad-soft: #fdecea;
+    --radius: 10px;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; font: 15px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; background: var(--bg); color: var(--ink); }
+  header { background: var(--card); border-bottom: 1px solid var(--line); padding: 10px 16px; display: flex; align-items: center; gap: 12px; position: sticky; top: 0; z-index: 5; }
+  header img { width: 38px; height: 38px; object-fit: contain; }
+  header .title { font-weight: 650; line-height: 1.2; }
+  header .title small { display: block; color: var(--muted); font-weight: 400; font-size: 12px; }
+  header .spacer { flex: 1; }
+  header .who { color: var(--muted); font-size: 13px; }
+  nav { display: flex; gap: 4px; overflow-x: auto; padding: 8px 12px; background: var(--card); border-bottom: 1px solid var(--line); }
+  nav button { border: 0; background: none; padding: 8px 12px; border-radius: 8px; color: var(--muted); font: inherit; white-space: nowrap; cursor: pointer; }
+  nav button.active { background: var(--brand-soft); color: var(--brand); font-weight: 600; }
+  main { max-width: 980px; margin: 0 auto; padding: 16px; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); padding: 16px; margin-bottom: 16px; }
+  h2 { font-size: 18px; margin: 0 0 4px; }
+  h3 { font-size: 15px; margin: 16px 0 8px; }
+  p.hint { color: var(--muted); margin: 0 0 12px; font-size: 13px; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; }
+  label { display: block; font-size: 12px; color: var(--muted); margin-bottom: 4px; }
+  input, select, textarea { width: 100%; padding: 9px 10px; border: 1px solid var(--line); border-radius: 8px; font: inherit; background: #fff; color: var(--ink); }
+  button.primary, button.secondary, button.danger { border: 0; border-radius: 8px; padding: 10px 16px; font: inherit; font-weight: 600; cursor: pointer; }
+  button.primary { background: var(--brand); color: #fff; }
+  button.secondary { background: #eef0f4; color: var(--ink); }
+  button.danger { background: var(--bad-soft); color: var(--bad); }
+  button:disabled { opacity: .55; cursor: default; }
+  .row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-top: 12px; }
+  table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  th, td { text-align: left; padding: 8px 6px; border-bottom: 1px solid var(--line); vertical-align: middle; }
+  th { color: var(--muted); font-weight: 600; font-size: 12px; }
+  .pill { display: inline-block; padding: 2px 8px; border-radius: 99px; font-size: 12px; font-weight: 600; }
+  .pill.ok { background: var(--ok-soft); color: var(--ok); }
+  .pill.warn { background: var(--warn-soft); color: var(--warn); }
+  .pill.bad { background: var(--bad-soft); color: var(--bad); }
+  .pill.muted { background: #eef0f4; color: var(--muted); }
+  .msg { padding: 10px 12px; border-radius: 8px; margin-top: 12px; font-size: 14px; }
+  .msg.ok { background: var(--ok-soft); color: var(--ok); }
+  .msg.bad { background: var(--bad-soft); color: var(--bad); }
+  .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 10px; margin: 12px 0; }
+  .stat { background: var(--bg); border-radius: 8px; padding: 10px 12px; }
+  .stat b { display: block; font-size: 22px; }
+  .stat span { color: var(--muted); font-size: 12px; }
+  .subject { display: grid; grid-template-columns: 1fr auto; gap: 4px 12px; padding: 12px 0; border-bottom: 1px solid var(--line); }
+  .subject .pill { justify-self: end; align-self: center; }
+  .bar { grid-column: 1 / -1; height: 8px; border-radius: 99px; background: #eef0f4; position: relative; overflow: hidden; }
+  .bar i { position: absolute; inset: 0 auto 0 0; background: var(--ok); border-radius: 99px; }
+  .bar i.low { background: var(--bad); }
+  .bar .min { position: absolute; top: -2px; bottom: -2px; width: 2px; background: var(--ink); left: 85%; }
+  .login { max-width: 380px; margin: 8vh auto; }
+  .login img { width: 72px; display: block; margin: 0 auto 8px; }
+  .center { text-align: center; }
+  .hidden { display: none !important; }
+  .muted { color: var(--muted); }
+  input[type=checkbox] { width: 20px; height: 20px; }
+  @media (max-width: 600px) { .hide-sm { display: none; } }
+</style>
+</head>
+<body>
+
+<!-- ============================ LOGIN ============================ -->
+<section id="loginView" class="login card">
+  <img src="/static/portal/svit_logo.jpeg" alt="SVIT logo">
+  <h2 class="center">EduLens</h2>
+  <p class="hint center">Sai Vidya Institute of Technology · Smart Attendance</p>
+  <form id="loginForm">
+    <label for="lu">Username</label>
+    <input id="lu" autocomplete="username" required>
+    <label for="lp" style="margin-top:10px">Password</label>
+    <input id="lp" type="password" autocomplete="current-password" required>
+    <div class="row"><button class="primary" style="width:100%">Sign in</button></div>
+    <div id="loginMsg"></div>
+  </form>
+</section>
+
+<!-- ============================ APP SHELL ============================ -->
+<div id="appView" class="hidden">
+  <header>
+    <img src="/static/portal/svit_logo.jpeg" alt="">
+    <div class="title">EduLens<small>SVIT Smart Attendance</small></div>
+    <div class="spacer"></div>
+    <div class="who" id="who"></div>
+    <button class="secondary" id="logoutBtn">Sign out</button>
+  </header>
+  <nav id="nav"></nav>
+  <main>
+
+    <!-- ---------- TAKE ATTENDANCE ---------- -->
+    <section data-tab="attendance" data-roles="staff">
+      <div class="card">
+        <h2>Take attendance</h2>
+        <p class="hint">Start a session, add 1–4 classroom photos (left, centre, right, back rows), review the list, then confirm. Nothing is saved until you confirm.</p>
+        <div class="grid">
+          <div><label>Subject code</label><input id="aSubject" placeholder="BCS701"></div>
+          <div><label>Faculty name</label><input id="aFaculty"></div>
+          <div><label>Department</label><input id="aDept" placeholder="CSD"></div>
+          <div><label>Semester</label><input id="aSem" placeholder="7"></div>
+          <div><label>Section</label><input id="aSec" placeholder="A"></div>
+        </div>
+        <div class="row">
+          <button class="primary" id="startBtn">Start session</button>
+          <span class="muted" id="sessionInfo"></span>
+        </div>
+        <div id="startMsg"></div>
+      </div>
+
+      <div class="card hidden" id="captureCard">
+        <h2>Classroom photos</h2>
+        <p class="hint">On a phone this opens the camera. Each photo is processed as soon as it is chosen.</p>
+        <input type="file" id="photoInput" accept="image/jpeg,image/png" capture="environment" multiple>
+        <div id="photoLog" class="muted" style="margin-top:8px"></div>
+      </div>
+
+      <div class="card hidden" id="reviewCard">
+        <h2>Review and confirm</h2>
+        <div class="stats" id="reviewStats"></div>
+        <div class="row" style="margin-top:0">
+          <button class="secondary" id="allPresent">Mark all present</button>
+          <button class="secondary" id="allAbsent">Mark all absent</button>
+          <button class="secondary" id="refreshReview">Refresh</button>
+        </div>
+        <table style="margin-top:8px">
+          <thead><tr><th>Present</th><th>USN</th><th>Name</th><th class="hide-sm">Camera</th></tr></thead>
+          <tbody id="reviewBody"></tbody>
+        </table>
+        <label style="margin-top:12px">Reason for students marked by hand (optional)</label>
+        <input id="manualReason" placeholder="e.g. seated behind a pillar">
+        <div class="row">
+          <button class="primary" id="confirmBtn">Confirm and save</button>
+          <button class="danger" id="cancelSessionBtn" title="Ends the session with the camera's list only">End without review</button>
+        </div>
+        <div id="confirmMsg"></div>
+      </div>
+    </section>
+
+    <!-- ---------- SHORTAGE / REPORTS ---------- -->
+    <section data-tab="shortage" data-roles="staff">
+      <div class="card">
+        <h2>Attendance shortage (VTU 85%)</h2>
+        <p class="hint">Students below the minimum across confirmed sessions. Send their parents an SMS/e-mail; each parent gets at most one alert per subject per week.</p>
+        <div class="grid">
+          <div><label>Department</label><input id="sDept"></div>
+          <div><label>Semester</label><input id="sSem"></div>
+          <div><label>Section</label><input id="sSec"></div>
+          <div><label>Subject</label><input id="sSub"></div>
+          <div><label>Threshold %</label><input id="sThr" type="number" value="85"></div>
+        </div>
+        <div class="row">
+          <button class="secondary" id="loadShortage">Show list</button>
+          <button class="primary" id="sendShortage">Send parent alerts</button>
+        </div>
+        <div id="shortageMsg"></div>
+        <table style="margin-top:8px">
+          <thead><tr><th>USN</th><th>Name</th><th>Subject</th><th>Attended</th><th>%</th><th class="hide-sm">Needs</th></tr></thead>
+          <tbody id="shortageBody"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ---------- PARENT ALERTS LOG ---------- -->
+    <section data-tab="alerts" data-roles="staff">
+      <div class="card">
+        <h2>Parent alerts</h2>
+        <p class="hint" id="alertStatus"></p>
+        <div class="row" style="margin-top:0"><button class="secondary" id="loadAlerts">Refresh</button></div>
+        <table style="margin-top:8px">
+          <thead><tr><th>Time</th><th>Student</th><th>Type</th><th class="hide-sm">To</th><th>Status</th></tr></thead>
+          <tbody id="alertBody"></tbody>
+        </table>
+      </div>
+      <div class="card" data-roles="admin">
+        <h3 style="margin-top:0">Send a test message</h3>
+        <div class="grid">
+          <div><label>Mobile</label><input id="tPhone" placeholder="98XXXXXXXX"></div>
+          <div><label>E-mail</label><input id="tEmail"></div>
+        </div>
+        <div class="row"><button class="secondary" id="sendTest">Send test</button></div>
+        <div id="testMsg"></div>
+      </div>
+    </section>
+
+    <!-- ---------- IA MARKS ---------- -->
+    <section data-tab="marks" data-roles="staff">
+      <div class="card">
+        <h2>IA marks</h2>
+        <div class="grid">
+          <div><label>Subject code</label><input id="mSub"></div>
+          <div><label>IA number</label><input id="mIa" type="number" value="1" min="1" max="3"></div>
+          <div><label>Max marks</label><input id="mMax" type="number" value="50"></div>
+          <div><label>Department</label><input id="mDept"></div>
+          <div><label>Semester</label><input id="mSem"></div>
+          <div><label>Section</label><input id="mSec"></div>
+        </div>
+        <div class="row"><button class="secondary" id="loadMarks">Load class</button></div>
+        <table style="margin-top:8px">
+          <thead><tr><th>USN</th><th>Name</th><th style="width:110px">Marks</th></tr></thead>
+          <tbody id="marksBody"></tbody>
+        </table>
+        <div class="row"><button class="primary" id="saveMarks">Save marks</button></div>
+        <div id="marksMsg"></div>
+      </div>
+    </section>
+
+    <!-- ---------- ASSIGNMENTS ---------- -->
+    <section data-tab="assignments" data-roles="staff">
+      <div class="card">
+        <h2>Assignment deadlines</h2>
+        <div class="grid">
+          <div><label>Subject code</label><input id="dSub"></div>
+          <div><label>Department</label><input id="dDept"></div>
+          <div><label>Semester</label><input id="dSem"></div>
+          <div><label>Section</label><input id="dSec"></div>
+          <div><label>Deadline</label><input id="dDate" type="date"></div>
+        </div>
+        <label style="margin-top:10px">Title</label><input id="dTitle">
+        <label style="margin-top:10px">Details</label><textarea id="dDesc" rows="2"></textarea>
+        <div class="row"><button class="primary" id="saveAssign">Post deadline</button></div>
+        <div id="assignMsg"></div>
+        <h3>Posted</h3>
+        <table><thead><tr><th>Deadline</th><th>Subject</th><th>Title</th><th class="hide-sm">Class</th></tr></thead><tbody id="assignBody"></tbody></table>
+      </div>
+    </section>
+
+    <!-- ---------- STUDENTS / ADMIN ---------- -->
+    <section data-tab="students" data-roles="admin">
+      <div class="card">
+        <h2>Import roster</h2>
+        <p class="hint">CSV with a header row: usn, name, department, semester, section, email, phone_number, parent_name, parent_phone, parent_email. Existing students are updated; faces are enrolled separately from the app.</p>
+        <input type="file" id="csvInput" accept=".csv,text/csv">
+        <div class="row"><button class="primary" id="importBtn">Import</button></div>
+        <div id="importMsg"></div>
+      </div>
+      <div class="card">
+        <h2>Create account</h2>
+        <div class="grid">
+          <div><label>Username</label><input id="uName"></div>
+          <div><label>Password (8+)</label><input id="uPass" type="password"></div>
+          <div><label>Role</label>
+            <select id="uRole"><option value="teacher">Faculty</option><option value="hod">HOD</option><option value="student">Student</option><option value="administrator">Administrator</option></select></div>
+          <div><label>Student ID (students only)</label><input id="uStu" placeholder="USN"></div>
+        </div>
+        <div class="row"><button class="primary" id="createUser">Create</button></div>
+        <div id="userMsg"></div>
+      </div>
+      <div class="card">
+        <h2>Students</h2>
+        <div class="grid">
+          <div><label>Department</label><input id="rDept"></div>
+          <div><label>Semester</label><input id="rSem"></div>
+          <div><label>Section</label><input id="rSec"></div>
+        </div>
+        <div class="row"><button class="secondary" id="loadRoster">Show</button></div>
+        <table style="margin-top:8px"><thead><tr><th>USN</th><th>Name</th><th class="hide-sm">Class</th><th>Parent mobile</th><th></th></tr></thead><tbody id="rosterBody"></tbody></table>
+      </div>
+    </section>
+
+    <!-- ---------- STUDENT PORTAL ---------- -->
+    <section data-tab="me" data-roles="student">
+      <div class="card">
+        <h2 id="meName">My attendance</h2>
+        <p class="hint" id="meInfo"></p>
+        <div class="stats" id="meStats"></div>
+        <div id="meSubjects"></div>
+      </div>
+      <div class="card">
+        <h2>IA marks</h2>
+        <table><thead><tr><th>Subject</th><th>IA</th><th>Marks</th></tr></thead><tbody id="meMarks"></tbody></table>
+      </div>
+      <div class="card">
+        <h2>Upcoming deadlines</h2>
+        <table><thead><tr><th>Deadline</th><th>Subject</th><th>Title</th></tr></thead><tbody id="meAssign"></tbody></table>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<script>
+(() => {
+  'use strict';
+
+  const $ = id => document.getElementById(id);
+  const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const store = {
+    get(k) { try { return localStorage.getItem(k); } catch { return null; } },
+    set(k, v) { try { localStorage.setItem(k, v); } catch {} },
+    del(k) { try { localStorage.removeItem(k); } catch {} },
+  };
+
+  let token = store.get('edulens_token');
+  let role = store.get('edulens_role');
+  let username = store.get('edulens_user');
+  let session = null;      // active attendance session
+  let reviewRows = [];
+
+  const isStaff = () => ['administrator', 'hod', 'teacher', 'faculty'].includes(role);
+  const isAdmin = () => ['administrator', 'hod'].includes(role);
+
+  function show(el, text, ok) {
+    $(el).innerHTML = text ? `<div class="msg ${ok ? 'ok' : 'bad'}">${esc(text)}</div>` : '';
+  }
+
+  async function api(path, opts = {}) {
+    const headers = Object.assign({}, opts.headers || {});
+    if (token) headers.Authorization = 'Bearer ' + token;
+    let body = opts.body;
+    if (body && !(body instanceof FormData)) {
+      headers['Content-Type'] = 'application/json';
+      body = JSON.stringify(body);
+    }
+    const res = await fetch(path, { method: opts.method || (body ? 'POST' : 'GET'), headers, body });
+    let data = {};
+    try { data = await res.json(); } catch {}
+    if (res.status === 401) { logout(); throw new Error('Session expired. Please sign in again.'); }
+    if (!res.ok || data.success === false) {
+      throw new Error(data.error || data.message || `Request failed (${res.status})`);
+    }
+    return data;
+  }
+
+  // ------------------------------------------------------------ login
+  $('loginForm').addEventListener('submit', async e => {
+    e.preventDefault();
+    show('loginMsg', '');
+    try {
+      const res = await fetch('/login', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username: $('lu').value.trim(), password: $('lp').value }) });
+      const data = await res.json();
+      if (!res.ok || !data.token) throw new Error(data.message || 'Invalid username or password');
+      token = data.token; role = data.role; username = $('lu').value.trim();
+      store.set('edulens_token', token); store.set('edulens_role', role); store.set('edulens_user', username);
+      boot();
+    } catch (err) { show('loginMsg', err.message, false); }
+  });
+
+  function logout() {
+    token = role = username = null;
+    ['edulens_token', 'edulens_role', 'edulens_user'].forEach(store.del);
+    $('appView').classList.add('hidden');
+    $('loginView').classList.remove('hidden');
+  }
+  $('logoutBtn').onclick = logout;
+
+  // ------------------------------------------------------------ navigation
+  const TABS = [
+    ['attendance', 'Take attendance', 'staff'],
+    ['shortage', 'Shortage', 'staff'],
+    ['alerts', 'Parent alerts', 'staff'],
+    ['marks', 'IA marks', 'staff'],
+    ['assignments', 'Deadlines', 'staff'],
+    ['students', 'Students', 'admin'],
+    ['me', 'My attendance', 'student'],
+  ];
+  const allowed = r => r === 'staff' ? isStaff() : r === 'admin' ? isAdmin() : role === 'student';
+
+  function openTab(name) {
+    document.querySelectorAll('nav button').forEach(b => b.classList.toggle('active', b.dataset.tab === name));
+    document.querySelectorAll('main > section').forEach(s => s.classList.toggle('hidden', s.dataset.tab !== name));
+    const loaders = { alerts: loadAlerts, assignments: loadAssignments, me: loadMe, shortage: async () => $('loadShortage').click() };
+    if (loaders[name]) loaders[name]().catch(() => {});
+  }
+
+  function boot() {
+    $('loginView').classList.add('hidden');
+    $('appView').classList.remove('hidden');
+    $('who').textContent = `${username} · ${role}`;
+    const nav = $('nav');
+    nav.innerHTML = '';
+    const visible = TABS.filter(([, , r]) => allowed(r));
+    visible.forEach(([tab, label]) => {
+      const b = document.createElement('button');
+      b.textContent = label; b.dataset.tab = tab; b.onclick = () => { history.replaceState(null, '', '#' + tab); openTab(tab); };
+      nav.appendChild(b);
+    });
+    document.querySelectorAll('[data-roles="admin"]').forEach(el => {
+      if (el.tagName !== 'SECTION') el.classList.toggle('hidden', !isAdmin());
+    });
+    $('aFaculty').value = $('aFaculty').value || username;
+    const fromHash = location.hash.slice(1);
+    const first = visible.find(([t]) => t === fromHash) || visible[0];
+    if (first) openTab(first[0]);
+    if (isStaff()) resumeSession();
+  }
+
+  // ------------------------------------------------------------ attendance
+  const classFields = () => ({
+    subject: $('aSubject').value.trim(), faculty: $('aFaculty').value.trim(),
+    department: $('aDept').value.trim(), semester: $('aSem').value.trim(), section: $('aSec').value.trim(),
+  });
+
+  function setSession(s) {
+    session = s;
+    const on = !!(s && s.status === 'ACTIVE');
+    $('captureCard').classList.toggle('hidden', !on);
+    $('reviewCard').classList.toggle('hidden', !on);
+    $('startBtn').disabled = on;
+    $('sessionInfo').textContent = on ? `Session #${s.sessionId} active · ${s.subject} · ${s.department}-${s.semester}${s.section}` : '';
+    if (on) {
+      $('aSubject').value = s.subject; $('aFaculty').value = s.faculty; $('aDept').value = s.department;
+      $('aSem').value = s.semester; $('aSec').value = s.section;
+      store.set('edulens_session', String(s.sessionId));
+      loadReview();
+    } else {
+      store.del('edulens_session');
+    }
+  }
+
+  async function resumeSession() {
+    const id = store.get('edulens_session');
+    if (!id) return;
+    try {
+      const r = await api(`/api/sessions/${id}/review`);
+      if (r.session && r.session.status === 'ACTIVE') setSession(r.session); else store.del('edulens_session');
+    } catch { store.del('edulens_session'); }
+  }
+
+  $('startBtn').onclick = async () => {
+    show('startMsg', '');
+    const f = classFields();
+    const missing = Object.entries(f).filter(([, v]) => !v).map(([k]) => k);
+    if (missing.length) return show('startMsg', 'Fill in: ' + missing.join(', '), false);
+    try {
+      const r = await api('/api/sessions/start', { body: f });
+      $('photoLog').innerHTML = '';
+      setSession(r.session);
+    } catch (err) {
+      show('startMsg', err.message, false);
+    }
+  };
+
+  $('photoInput').onchange = async e => {
+    const files = Array.from(e.target.files || []);
+    e.target.value = '';
+    for (const file of files) {
+      const line = document.createElement('div');
+      line.textContent = `Processing ${file.name}…`;
+      $('photoLog').appendChild(line);
+      try {
+        const fd = new FormData();
+        fd.append('image', file, file.name || 'photo.jpg');
+        Object.entries(classFields()).forEach(([k, v]) => fd.append(k, v));
+        const r = await api('/api/recognize', { body: fd });
+        line.textContent = `${file.name}: ${r.students.length} recognised, ${r.attendanceAdded.length} new · ${r.candidatesSoFar}/${r.rosterSize} detected so far`;
+      } catch (err) {
+        line.textContent = `${file.name}: ${err.message}`;
+        line.style.color = 'var(--bad)';
+      }
+    }
+    loadReview();
+  };
+
+  async function loadReview() {
+    if (!session) return;
+    const r = await api(`/api/sessions/${session.sessionId}/review`);
+    reviewRows = r.students.map(s => ({ ...s, present: s.detected }));
+    renderReview();
+  }
+  $('refreshReview').onclick = () => loadReview().catch(err => show('confirmMsg', err.message, false));
+
+  function renderReview() {
+    const present = reviewRows.filter(s => s.present).length;
+    const detected = reviewRows.filter(s => s.detected).length;
+    $('reviewStats').innerHTML = [
+      [reviewRows.length, 'On roster'], [detected, 'Detected by camera'],
+      [present, 'Marked present'], [reviewRows.length - present, 'Will be absent'],
+    ].map(([n, l]) => `<div class="stat"><b>${n}</b><span>${l}</span></div>`).join('');
+    $('reviewBody').innerHTML = reviewRows.map((s, i) => `
+      <tr>
+        <td><input type="checkbox" data-i="${i}" ${s.present ? 'checked' : ''} aria-label="Present"></td>
+        <td>${esc(s.usn || s.studentId)}</td>
+        <td>${esc(s.name)}</td>
+        <td class="hide-sm">${s.detected ? `<span class="pill ok">${(s.confidence ?? 0).toFixed(2)}</span>` : '<span class="pill muted">not seen</span>'}</td>
+      </tr>`).join('') || '<tr><td colspan="4" class="muted">No students on this roster. Import the roster first.</td></tr>';
+  }
+  $('reviewBody').onchange = e => {
+    const i = e.target.dataset.i;
+    if (i !== undefined) { reviewRows[i].present = e.target.checked; renderReview(); }
+  };
+  $('allPresent').onclick = () => { reviewRows.forEach(s => s.present = true); renderReview(); };
+  $('allAbsent').onclick = () => { reviewRows.forEach(s => s.present = false); renderReview(); };
+
+  $('confirmBtn').onclick = async () => {
+    if (!session) return;
+    const present = reviewRows.filter(s => s.present);
+    const ok = confirm(`${session.subject} · ${session.department}-${session.semester}${session.section}\n` +
+      `Present: ${present.length}   Absent: ${reviewRows.length - present.length}   Total: ${reviewRows.length}\n\n` +
+      'Save and lock this register? Parents of absent students will be notified.');
+    if (!ok) return;
+    try {
+      const r = await api('/api/attendance/confirm', { body: {
+        sessionId: session.sessionId, presentStudentIds: present.map(s => s.studentId),
+        manualReason: $('manualReason').value.trim() } });
+      show('confirmMsg', r.message, true);
+      $('manualReason').value = '';
+      setTimeout(() => { setSession(null); show('startMsg', r.message, true); }, 1200);
+    } catch (err) { show('confirmMsg', err.message, false); }
+  };
+
+  $('cancelSessionBtn').onclick = async () => {
+    if (!session || !confirm('End the session using only the camera matches?')) return;
+    try {
+      const r = await api('/api/sessions/end', { body: { sessionId: session.sessionId } });
+      setSession(null); show('startMsg', r.message, true);
+    } catch (err) { show('confirmMsg', err.message, false); }
+  };
+
+  // ------------------------------------------------------------ shortage
+  const shortageFilters = () => ({
+    department: $('sDept').value.trim(), semester: $('sSem').value.trim(),
+    section: $('sSec').value.trim(), subject: $('sSub').value.trim(),
+  });
+
+  $('loadShortage').onclick = async () => {
+    show('shortageMsg', '');
+    const q = new URLSearchParams({ threshold: $('sThr').value || 85 });
+    Object.entries(shortageFilters()).forEach(([k, v]) => v && q.set(k, v));
+    try {
+      const r = await api('/api/shortage?' + q);
+      $('shortageBody').innerHTML = r.students.map(s => `
+        <tr><td>${esc(s.usn)}</td><td>${esc(s.name)}</td><td>${esc(s.subject)}</td>
+        <td>${s.present}/${s.total}</td>
+        <td><span class="pill ${s.percent < 75 ? 'bad' : 'warn'}">${s.percent}%</span></td>
+        <td class="hide-sm">${s.mustAttend} more classes${s.parentPhoneOnFile ? '' : ' · no parent mobile'}</td></tr>`).join('')
+        || '<tr><td colspan="6" class="muted">No students below the threshold.</td></tr>';
+    } catch (err) { show('shortageMsg', err.message, false); }
+  };
+
+  $('sendShortage').onclick = async () => {
+    if (!confirm('Send SMS/e-mail to parents of every student below the threshold?')) return;
+    try {
+      const body = { ...shortageFilters(), threshold: Number($('sThr').value || 85) };
+      Object.keys(body).forEach(k => body[k] === '' && delete body[k]);
+      const r = await api('/api/notifications/parents/shortage', { body });
+      show('shortageMsg', `Alerts sent: ${r.sent}. Failed: ${r.failed}. (Parents already alerted this week are skipped.)`, r.failed === 0);
+    } catch (err) { show('shortageMsg', err.message, false); }
+  };
+
+  // ------------------------------------------------------------ alerts
+  async function loadAlerts() {
+    const st = await api('/api/notifications/parents/status');
+    $('alertStatus').textContent = `SMS provider: ${st.smsProvider}${st.smsProvider === 'log' ? ' (demo mode: messages are recorded, not sent)' : ''} · E-mail: ${st.emailEnabled ? 'on' : 'off'} · Minimum: ${st.minimumPercent}%`;
+    const r = await api('/api/notifications/parents');
+    $('alertBody').innerHTML = r.notifications.map(n => `
+      <tr title="${esc(n.message)}"><td>${esc((n.created_at || '').slice(0, 16))}</td><td>${esc(n.student_id)}</td>
+      <td>${esc(n.kind)}</td><td class="hide-sm">${esc(n.channel)} ${esc(n.recipient)}</td>
+      <td><span class="pill ${n.status === 'SENT' ? 'ok' : n.status === 'FAILED' ? 'bad' : 'muted'}">${esc(n.status)}</span></td></tr>`).join('')
+      || '<tr><td colspan="5" class="muted">No parent alerts yet.</td></tr>';
+  }
+  $('loadAlerts').onclick = () => loadAlerts().catch(() => {});
+
+  $('sendTest').onclick = async () => {
+    try {
+      const r = await api('/api/notifications/parents/test', { body: { phone: $('tPhone').value.trim(), email: $('tEmail').value.trim() } });
+      show('testMsg', 'Test sent' + (r.smsProvider === 'log' ? ' (log mode: see server output)' : ''), true);
+    } catch (err) { show('testMsg', err.message, false); }
+  };
+
+  // ------------------------------------------------------------ IA marks
+  let marksRoster = [];
+  $('loadMarks').onclick = async () => {
+    show('marksMsg', '');
+    const q = new URLSearchParams();
+    [['department', 'mDept'], ['semester', 'mSem'], ['section', 'mSec']].forEach(([k, id]) => $(id).value.trim() && q.set(k, $(id).value.trim()));
+    try {
+      const [roster, marks] = await Promise.all([
+        api('/api/students?' + q),
+        api('/api/ia-marks?' + new URLSearchParams({ subject: $('mSub').value.trim(), iaNo: $('mIa').value })),
+      ]);
+      const existing = Object.fromEntries(marks.marks.map(m => [m.student_id, m.marks]));
+      marksRoster = roster.students;
+      $('marksBody').innerHTML = marksRoster.map((s, i) => `
+        <tr><td>${esc(s.usn)}</td><td>${esc(s.name)}</td>
+        <td><input type="number" min="0" step="0.5" data-i="${i}" value="${existing[s.student_id] ?? ''}"></td></tr>`).join('')
+        || '<tr><td colspan="3" class="muted">No students found.</td></tr>';
+    } catch (err) { show('marksMsg', err.message, false); }
+  };
+  $('saveMarks').onclick = async () => {
+    const entries = Array.from($('marksBody').querySelectorAll('input'))
+      .filter(i => i.value !== '').map(i => ({ studentId: marksRoster[i.dataset.i].student_id, marks: Number(i.value) }));
+    try {
+      const r = await api('/api/ia-marks', { body: { subject: $('mSub').value.trim(), iaNo: Number($('mIa').value), maxMarks: Number($('mMax').value), marks: entries } });
+      show('marksMsg', `Saved ${r.saved}.` + (r.errors.length ? ' Problems: ' + r.errors.join('; ') : ''), !r.errors.length);
+    } catch (err) { show('marksMsg', err.message, false); }
+  };
+
+  // ------------------------------------------------------------ assignments
+  async function loadAssignments() {
+    const r = await api('/api/assignments');
+    $('assignBody').innerHTML = r.assignments.map(a => `
+      <tr><td>${esc(a.deadline)}</td><td>${esc(a.subject)}</td><td>${esc(a.title)}</td>
+      <td class="hide-sm">${esc(a.department)}-${esc(a.semester)}${esc(a.section)}</td></tr>`).join('')
+      || '<tr><td colspan="4" class="muted">None posted.</td></tr>';
+  }
+  $('saveAssign').onclick = async () => {
+    try {
+      await api('/api/assignments', { body: { subject: $('dSub').value.trim(), department: $('dDept').value.trim(),
+        semester: $('dSem').value.trim(), section: $('dSec').value.trim(), deadline: $('dDate').value,
+        title: $('dTitle').value.trim(), description: $('dDesc').value.trim() } });
+      show('assignMsg', 'Deadline posted.', true);
+      $('dTitle').value = $('dDesc').value = '';
+      loadAssignments();
+    } catch (err) { show('assignMsg', err.message, false); }
+  };
+
+  // ------------------------------------------------------------ admin
+  $('importBtn').onclick = async () => {
+    const file = $('csvInput').files[0];
+    if (!file) return show('importMsg', 'Choose a CSV file first.', false);
+    const fd = new FormData(); fd.append('file', file);
+    try {
+      const r = await api('/api/students/import', { body: fd });
+      show('importMsg', `Added ${r.inserted}, updated ${r.updated}.` + (r.errors.length ? ' Problems: ' + r.errors.join('; ') : ''), !r.errors.length);
+    } catch (err) { show('importMsg', err.message, false); }
+  };
+
+  $('createUser').onclick = async () => {
+    try {
+      const r = await api('/api/users', { body: { username: $('uName').value.trim(), password: $('uPass').value,
+        role: $('uRole').value, studentId: $('uStu').value.trim() } });
+      show('userMsg', r.message, true); $('uPass').value = '';
+    } catch (err) { show('userMsg', err.message, false); }
+  };
+
+  $('loadRoster').onclick = async () => {
+    const q = new URLSearchParams();
+    [['department', 'rDept'], ['semester', 'rSem'], ['section', 'rSec']].forEach(([k, id]) => $(id).value.trim() && q.set(k, $(id).value.trim()));
+    const r = await api('/api/students?' + q);
+    $('rosterBody').innerHTML = r.students.map((s, i) => `
+      <tr><td>${esc(s.usn)}</td><td>${esc(s.name)}</td><td class="hide-sm">${esc(s.department)}-${esc(s.semester)}${esc(s.section)}</td>
+      <td><input data-sid="${esc(s.student_id)}" value="${esc(s.parent_phone || '')}" placeholder="not set"></td>
+      <td><button class="secondary" data-save="${esc(s.student_id)}">Save</button></td></tr>`).join('')
+      || '<tr><td colspan="5" class="muted">No students.</td></tr>';
+  };
+  $('rosterBody').onclick = async e => {
+    const sid = e.target.dataset.save;
+    if (!sid) return;
+    const input = $('rosterBody').querySelector(`input[data-sid="${CSS.escape(sid)}"]`);
+    try {
+      await api(`/api/students/${encodeURIComponent(sid)}/parent`, { method: 'PUT', body: { parentPhone: input.value.trim() } });
+      e.target.textContent = 'Saved';
+    } catch (err) { e.target.textContent = 'Error'; e.target.title = err.message; }
+  };
+
+  // ------------------------------------------------------------ student portal
+  async function loadMe() {
+    const r = await api('/api/me/attendance');
+    const s = r.student;
+    $('meName').textContent = s.name;
+    $('meInfo').textContent = `${s.usn} · ${s.department} · Semester ${s.semester} · Section ${s.section}`;
+    const short = r.subjects.filter(x => x.shortage).length;
+    $('meStats').innerHTML = [[r.overallPercent + '%', 'Overall'], [r.subjects.length, 'Subjects'], [short, `Below ${r.minimumPercent}%`]]
+      .map(([n, l]) => `<div class="stat"><b>${n}</b><span>${l}</span></div>`).join('');
+    $('meSubjects').innerHTML = r.subjects.map(x => `
+      <div class="subject">
+        <b>${esc(x.subject)}</b>
+        <span class="pill ${x.shortage ? 'bad' : 'ok'}">${x.percent}%</span>
+        <div class="bar"><i class="${x.shortage ? 'low' : ''}" style="width:${Math.min(100, x.percent)}%"></i><span class="min"></span></div>
+        <span class="muted">${x.present} of ${x.total} classes</span>
+        <span class="muted">${x.shortage ? `Attend the next ${x.mustAttend} to reach ${r.minimumPercent}%` : `Can miss ${x.canMiss} more`}</span>
+      </div>`).join('') || '<p class="muted">No confirmed classes yet.</p>';
+    const [m, a] = await Promise.all([api('/api/me/marks'), api('/api/me/assignments')]);
+    $('meMarks').innerHTML = m.marks.map(x => `<tr><td>${esc(x.subject)}</td><td>IA ${x.ia_no}</td><td>${x.marks} / ${x.max_marks}</td></tr>`).join('')
+      || '<tr><td colspan="3" class="muted">No marks yet.</td></tr>';
+    $('meAssign').innerHTML = a.assignments.map(x => `<tr><td>${esc(x.deadline)}</td><td>${esc(x.subject)}</td><td>${esc(x.title)}</td></tr>`).join('')
+      || '<tr><td colspan="3" class="muted">Nothing due.</td></tr>';
+  }
+
+  if (token && role) boot();
+})();
+</script>
+</body>
+</html>
