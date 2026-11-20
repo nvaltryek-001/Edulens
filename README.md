@@ -23,11 +23,27 @@ One classroom photo · Teacher-verified register · Parent SMS alerts · VTU 85%
 
 ## Demo
 
-<p align="center"><img src="docs/media/edulens_demo.gif" alt="EduLens demo: faculty takes attendance, reviews, confirms; shortage list, parent alerts, student view" width="900" /></p>
+<p align="center"><a href="docs/media/edulens_demo.mp4"><img src="docs/media/edulens_demo.gif" alt="EduLens demo highlights: title, workflow, teacher review and correction, parent SMS, per-subject shortage" width="860" /></a></p>
 
-<p align="center"><b><a href="docs/media/edulens_demo.mp4">▶ Watch the full demo video (MP4, 56 s)</a></b></p>
+<p align="center"><b><a href="docs/media/edulens_demo.mp4">▶ Watch the full demo (MP4, 1 min 55 s, with music)</a></b></p>
 
-The walkthrough is recorded from the running system with test data. A faculty member starts a session for BCS701, uploads a classroom photo, reviews the 9 faces the camera matched, adds one student it missed, and confirms. The register for all 12 students is then saved and locked. The video continues through the 85% shortage list, parent alerts, IA marks, the admin roster and the student dashboard.
+The full demo is recorded from the running system with the **real 7th-semester CSE (Data Science) class**: 112 students, Section A (64) and Section B (48). Student names are partly masked here because this repository is public. Phone numbers are dummies, and the attendance history is simulated because no real classes have been run yet.
+
+| Time | Chapter |
+|---|---|
+| 0:00 | Title |
+| 0:05 | Problem: lost lecture time, proxies, late shortage |
+| 0:12 | Solution: one photo in, a verified register out |
+| 0:20 | Architecture: one campus server, no paid AI APIs |
+| 0:27 | Real class loaded: 112 students, A/B sections, 112 logins in one click |
+| 0:34 | Live: faculty signs in, picks BCS701 Section A |
+| 0:43 | Live: camera matches pre-ticked, teacher adds the ones it missed |
+| 0:55 | Live: confirmed and locked, Present + Absent for the whole roster |
+| 1:00 | Parent / student SMS on a phone |
+| 1:08 | Per-subject VTU 85% shortage and the alert log |
+| 1:19 | Weekly self-update e-mail to every student |
+| 1:26 | Student dashboard, admin roster |
+| 1:37 | Technology, verification, next steps |
 
 | Item | Details |
 |---|---|
@@ -35,6 +51,7 @@ The walkthrough is recorded from the running system with test data. A faculty me
 | **Guide** | Prof. Pulukuri Aparna, Assistant Professor, Dept. of CSE (Data Science), SVIT |
 | **YUKTI Innovation ID** | IR2026-1060038 |
 | **Exhibition** | TECHSPARDHA, Project Exhibition 2K26, SVIT, 21 November 2026 |
+| **Pilot class** | 7th semester CSE (Data Science): 112 students, Section A (64) and Section B (48) |
 
 ---
 
@@ -103,13 +120,15 @@ All three clients use the same Flask API, so a college can roll out the web port
 
 ## Screenshots
 
-| Faculty: class details | Review: camera matches pre-ticked | Teacher correction before saving |
+Taken from the real class (names masked).
+
+| Faculty: pick the class | Review: camera matches pre-ticked | Teacher adds the students the camera missed |
 |:-:|:-:|:-:|
 | <img src="docs/media/screen_02_class.png" width="300"/> | <img src="docs/media/screen_03_review.png" width="300"/> | <img src="docs/media/screen_04_corrected.png" width="300"/> |
-| **Per-subject VTU 85% shortage** | **Parent alert log** | **IA marks entry** |
-| <img src="docs/media/screen_05_shortage.png" width="300"/> | <img src="docs/media/screen_06_alerts.png" width="300"/> | <img src="docs/media/screen_07_ia_marks.png" width="300"/> |
-| **Admin: roster, accounts, parent mobiles** | **Student dashboard** | **Sign in** |
-| <img src="docs/media/screen_08_admin.png" width="300"/> | <img src="docs/media/screen_09_student.png" width="300"/> | <img src="docs/media/screen_01_login.png" width="300"/> |
+| **Confirmed and locked** | **Per-subject VTU 85% shortage** | **Alert log (parents and students)** |
+| <img src="docs/media/screen_05_confirmed.png" width="300"/> | <img src="docs/media/screen_06_shortage.png" width="300"/> | <img src="docs/media/screen_07_alerts.png" width="300"/> |
+| **Admin: Section A roster, parent mobiles** | **Student dashboard** | **Sign in with USN or college e-mail** |
+| <img src="docs/media/screen_08_roster.png" width="300"/> | <img src="docs/media/screen_09_student.png" width="300"/> | <img src="docs/media/screen_01_login.png" width="300"/> |
 
 ## System architecture
 
@@ -256,7 +275,7 @@ Edulens/
 │       └── ui/screens/              Login, Dashboard, Enrollment, Attendance (+ review dialog), Reports
 ├── tools/vtu_excel_to_roster.py     Class Excel sheet (USN, name, e-mail, mobile) → roster CSV
 ├── docs/
-│   ├── media/                       Demo video, GIF, screenshots, diagrams
+│   ├── media/                       Demo video (MP4), highlights GIF, screenshots, diagrams
 │   └── SVIT_Smart_Attendance_Project_Guides/   Design guides (architecture, DB, RBAC, privacy)
 ├── .github/workflows/ci.yml         CI: backend tests, Flutter APK, Kotlin APK
 ├── docker-compose.yml · .env.example
