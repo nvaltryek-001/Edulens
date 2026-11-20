@@ -101,11 +101,11 @@ class ApiClient {
     }
     token = body['token'] as String;
     role = body['role'] as String;
-    username = user;
+    username = (body['username'] ?? user).toString();
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('token', token!);
     await prefs.setString('role', role!);
-    await prefs.setString('username', user);
+    await prefs.setString('username', username!);
   }
 
   Future<void> logout() async {

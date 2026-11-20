@@ -91,11 +91,13 @@ The walkthrough is recorded from the running system with test data. A faculty me
 | **Faculty:** per-subject 85% shortage list, alert parents | ✅ | ✅ | ✅ (overall) |
 | **Faculty:** parent alert log | ✅ | ✅ | |
 | **Faculty:** IA marks entry, assignment deadlines | ✅ | ✅ | |
-| **Admin / HOD:** roster CSV import, accounts, parent mobiles | ✅ | | |
+| **Admin / HOD:** roster CSV import, one-click student logins, accounts, parent mobiles | ✅ | | |
+| **Everyone:** sign in with USN or college e-mail, change password | ✅ | ✅ (sign-in) | |
 | **Admin:** face enrollment (3–5 photos per student) | | | ✅ |
 | **Admin:** analytics, weekly summary, reports | | | ✅ |
 | **Student:** subject-wise %, classes to attend or can miss, marks, deadlines | ✅ | ✅ | |
-| **Parent:** SMS / e-mail on absence and on shortage | automatic | automatic | automatic |
+| **Parent** (or the student, if no parent number): SMS / e-mail on absence and on shortage | automatic | automatic | automatic |
+| **Student:** weekly attendance e-mail | automatic | automatic | automatic |
 
 All three clients use the same Flask API, so a college can roll out the web portal on day one and add the apps later.
 
@@ -252,6 +254,7 @@ Edulens/
 │       ├── api/                     Retrofit service + models (review, confirm)
 │       ├── data/                    Room offline database
 │       └── ui/screens/              Login, Dashboard, Enrollment, Attendance (+ review dialog), Reports
+├── tools/vtu_excel_to_roster.py     Class Excel sheet (USN, name, e-mail, mobile) → roster CSV
 ├── docs/
 │   ├── media/                       Demo video, GIF, screenshots, diagrams
 │   └── SVIT_Smart_Attendance_Project_Guides/   Design guides (architecture, DB, RBAC, privacy)
@@ -335,8 +338,10 @@ All routes except `/login` and `/portal` need `Authorization: Bearer <JWT>`. See
 
 | Method | Route | Who | Purpose |
 |---|---|---|---|
-| POST | `/login` | all | JWT for administrator, hod, teacher/faculty, student |
+| POST | `/login` | all | JWT for administrator, hod, teacher/faculty, student (students may use USN or college e-mail) |
 | POST | `/api/users` | admin | Create faculty, HOD and student accounts |
+| POST | `/api/students/create-accounts` | admin | Logins for every student without one; returns temporary passwords once, can e-mail them |
+| POST | `/api/me/password` | all | Change own password |
 | GET / POST | `/api/students` | staff / admin | List roster / add a student |
 | POST | `/api/students/import` | admin, HOD | Roster CSV with parent contacts |
 | PUT | `/api/students/<id>/parent` | admin, HOD | Update parent name, phone, e-mail |
@@ -387,10 +392,14 @@ python app.py                                        # http://0.0.0.0:5000
 
 ### 2. First-time setup at SVIT
 
-1. **Portal → Students → Import roster.** Use the CSV format in [`backend/sample_roster.csv`](backend/sample_roster.csv).
-2. **Portal → Students → Create account.** Create an account for each faculty member and HOD. For students, use role Student and Student ID = USN.
-3. **Kotlin app → Enrollment.** Enroll 3–5 face photos per student, in good light, after collecting written consent.
-4. Faculty can now take attendance from the Flutter app, the Kotlin app or the portal.
+1. **Convert the class sheet:** `pip install openpyxl && python tools/vtu_excel_to_roster.py VTU_Details_7th_sem.xlsx roster.csv --department CSD --semester 7 --section A`. It reads the USN, Name, Email and Mobile Number columns.
+2. **Portal → Students → Import roster** with that CSV (format: [`backend/sample_roster.csv`](backend/sample_roster.csv)). Add parent mobiles later in the same screen.
+3. **Portal → Students → Create student logins.** One click creates a login for every student (username = USN, or their `@saividya.ac.in` e-mail) and downloads the temporary passwords. Tick "E-mail each student" to send them automatically. Students change their password under **Password**.
+4. **Portal → Students → Create account** for each faculty member and HOD.
+5. **Kotlin app → Enrollment.** Enroll 3–5 face photos per student, in good light, after collecting written consent.
+6. Faculty can now take attendance from the Flutter app, the Kotlin app or the portal.
+
+> Real student data (names, mobiles, e-mails) stays on the college server. Never commit roster or password files: the repository is public, and `.gitignore` blocks `*.xlsx`, `roster_*.csv` and `credentials_*.csv`.
 
 ### 3. Flutter app
 
@@ -414,6 +423,7 @@ Full server sizing, HTTPS, backups and scaling are covered in [`deployment.md`](
 | `.env` setting | Behaviour |
 |---|---|
 | `PARENT_SMS_PROVIDER=log` | **Demo mode.** Messages are stored and shown in the portal; nothing is sent |
+| `PARENT_SMS_PROVIDER=android_gateway` + `ANDROID_GATEWAY_*` | **Free: SMS from your own Android phone's SIM** via the open-source [SMS Gateway for Android](https://github.com/capcom6/android-sms-gateway) app (Local Server mode, same Wi-Fi as the server) |
 | `PARENT_SMS_PROVIDER=fast2sms` + `FAST2SMS_API_KEY` | Fast2SMS (route `q` for testing) |
 | `PARENT_SMS_PROVIDER=msg91` + `MSG91_AUTH_KEY`, `MSG91_FLOW_ID` | MSG91 Flow with a DLT template |
 | `PARENT_SMS_PROVIDER=twilio` + `TWILIO_*` | Twilio |
@@ -429,8 +439,10 @@ Dear Parent, attendance of your ward Gowri Prasad (1VA23CD007) in BCS702 is 71.4
 required 85%. Please contact the class teacher. - SVIT
 ```
 
+- **No parent number yet?** With `NOTIFY_STUDENT_IF_NO_PARENT=true` (default) the alert goes to the student's own mobile and college e-mail, worded to the student.
+- **Weekly self-update:** every Monday each student gets an e-mail with their subject-wise attendance and how many classes they can miss or must attend.
 - Absence alerts go out automatically in the background when a session is confirmed.
-- Shortage alerts are sent from the portal or app, or weekly with cron: `0 9 * * 1  docker compose exec -T backend python send_shortage_alerts.py`.
+- Shortage alerts and weekly summaries run from cron: `0 9 * * 1  docker compose exec -T backend python send_shortage_alerts.py` (shortage alerts can also be sent from the portal or app).
 - Every message is stored with a unique (student, event, channel) key, so a parent is never alerted twice for the same absence or the same subject in the same week.
 - Commercial SMS in India requires a DLT-registered sender ID and approved templates.
 
@@ -447,6 +459,7 @@ The end-to-end test (`backend/tests/test_attendance_flow.py`) stubs the face mod
 - A duplicate face in a second photo is counted once.
 - Another teacher cannot confirm your session.
 - Confirmation writes Present + Absent, records manual additions and rejected AI matches, then locks the session.
+- Roster import, one-click student logins, e-mail login, password change, student-phone fallback, weekly summary e-mail (once per week) and the Android phone SMS gateway call.
 - The absence SMS is sent exactly once, and shortage lists and alerts are correct.
 - The student portal, IA marks, deadlines and role restrictions work.
 
@@ -469,7 +482,8 @@ GitHub Actions ([`ci.yml`](.github/workflows/ci.yml)) runs these tests and build
 | Matching | Against every enrolled student in the college | Only against the selected section's roster |
 | Concurrency | One active session in the whole college | One per faculty member or section; ownership checks |
 | Shortage rule | 75%, overall | **85% per subject (VTU)**, with "must attend" and "can miss" |
-| Parents | No messaging | SMS (3 gateways) + e-mail, automatic on absence, weekly on shortage, de-duplicated |
+| Parents | No messaging | SMS (own Android phone or 3 gateways) + e-mail, automatic on absence, weekly on shortage, de-duplicated; student fallback |
+| Student logins | One by one | One click for the whole class; USN or college e-mail; weekly attendance e-mail |
 | Clients | Kotlin app only | **Flutter app** (as in the report) + **web portal** + Kotlin app with review dialog |
 | Report features | Student portal, IA marks, deadlines missing | Implemented in the API, portal and Flutter app |
 | Admin | Students added one by one | Roster CSV import, account creation, parent contacts |

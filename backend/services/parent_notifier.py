@@ -11,9 +11,16 @@ for the same event, even if a session is confirmed again or the job is re-run.
 
 Configuration (environment variables)
 -------------------------------------
-PARENT_SMS_PROVIDER   log | fast2sms | msg91 | twilio      (default: log)
+PARENT_SMS_PROVIDER   log | android_gateway | fast2sms | msg91 | twilio   (default: log)
 PARENT_EMAIL_ENABLED  true | false                         (default: false)
 
+ANDROID_GATEWAY_URL, ANDROID_GATEWAY_USER, ANDROID_GATEWAY_PASSWORD
+    Sends SMS through an Android phone's own SIM using the free open-source
+    "SMS Gateway for Android" app (github.com/capcom6/android-sms-gateway):
+    install it on the phone, start the Local Server, and set
+    ANDROID_GATEWAY_URL=http://<phone-ip>:8080 with the user/password it shows.
+NOTIFY_STUDENT_IF_NO_PARENT  true | false   (default: true)
+    When a parent number/e-mail is missing, alert the student's own phone/e-mail.
 FAST2SMS_API_KEY, FAST2SMS_ROUTE (default "q")
 MSG91_AUTH_KEY, MSG91_FLOW_ID   (flow variables: name, usn, subject, date, percent)
 TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_FROM_NUMBER
@@ -56,6 +63,17 @@ SHORTAGE_TEMPLATE = (
     'Dear Parent, attendance of your ward {name} ({usn}) in {subject} is '
     '{percent}%, below the required {minimum}%. Please contact the class '
     'teacher. - {college}'
+)
+
+
+STUDENT_ABSENT_TEMPLATE = (
+    'Dear {name} ({usn}), you were marked absent for {subject} on {date} at {time}. '
+    'Attendance in {subject}: {percent}%. - {college}'
+)
+
+STUDENT_SHORTAGE_TEMPLATE = (
+    'Dear {name} ({usn}), your attendance in {subject} is {percent}%, below the required '
+    '{minimum}%. Attend the next {must} classes to recover. - {college}'
 )
 
 
@@ -126,12 +144,14 @@ class ParentNotifier:
             results = []
             for row in rows:
                 percent = self._subject_percent(conn, row['student_id'], session['subject'])
-                text = ABSENT_TEMPLATE.format(
+                fields = dict(
                     name=row['name'], usn=row['usn'] or row['student_id'],
                     subject=session['subject'], date=row['date'], time=(row['time'] or '')[:5],
                     percent=percent, college=COLLEGE,
                 )
-                results += self._deliver(conn, row, f'absent:{session_id}', 'ABSENT', text)
+                results += self._deliver(conn, row, f'absent:{session_id}', 'ABSENT',
+                                         ABSENT_TEMPLATE.format(**fields),
+                                         STUDENT_ABSENT_TEMPLATE.format(**fields))
             return results
         finally:
             conn.close()
@@ -148,6 +168,7 @@ class ParentNotifier:
         try:
             query = '''
                 SELECT s.student_id, s.name, s.usn, s.parent_name, s.parent_phone, s.parent_email,
+                       s.phone_number, s.email,
                        sess.subject AS subject,
                        SUM(CASE WHEN a.status = 'Present' THEN 1 ELSE 0 END) AS present,
                        COUNT(a.attendance_id) AS total
@@ -170,12 +191,16 @@ class ParentNotifier:
                 percent = round(100.0 * row['present'] / row['total'], 1)
                 if percent >= threshold:
                     continue
-                text = SHORTAGE_TEMPLATE.format(
+                m = threshold / 100.0
+                must = max(0, -(-(m * row['total'] - row['present']) // (1 - m)))
+                fields = dict(
                     name=row['name'], usn=row['usn'] or row['student_id'], subject=row['subject'],
-                    percent=percent, minimum=int(threshold), college=COLLEGE,
+                    percent=percent, minimum=int(threshold), college=COLLEGE, must=int(must),
                 )
                 key = f'shortage:{row["subject"]}:{period_key or "now"}'
-                results += self._deliver(conn, row, key, 'SHORTAGE', text)
+                results += self._deliver(conn, row, key, 'SHORTAGE',
+                                         SHORTAGE_TEMPLATE.format(**fields),
+                                         STUDENT_SHORTAGE_TEMPLATE.format(**fields))
             return results
         finally:
             conn.close()
@@ -214,14 +239,27 @@ class ParentNotifier:
             return 0
         return round(100.0 * row['present'] / row['total'], 1)
 
-    def _deliver(self, conn, student, event_key, kind, text):
-        results = []
-        channels = [('SMS', _clean_phone(student['parent_phone']))]
+    def _deliver(self, conn, student, event_key, kind, text, student_text=None):
+        """Send to the parent; if no parent contact, to the student (when enabled)."""
+        keys = student.keys()
+        get = lambda k: (student[k] if k in keys else None)
+        fallback = os.environ.get('NOTIFY_STUDENT_IF_NO_PARENT', 'true').lower() == 'true'
+
+        targets = []
+        parent_phone = _clean_phone(get('parent_phone'))
+        if parent_phone:
+            targets.append(('SMS', parent_phone, text))
+        elif fallback and student_text and _clean_phone(get('phone_number')):
+            targets.append(('SMS', _clean_phone(get('phone_number')), student_text))
         if self.email_enabled:
-            channels.append(('EMAIL', (student['parent_email'] or '').strip() or None))
-        for channel, recipient in channels:
-            if not recipient:
-                continue
+            parent_email = (get('parent_email') or '').strip()
+            if parent_email:
+                targets.append(('EMAIL', parent_email, text))
+            elif fallback and student_text and (get('email') or '').strip():
+                targets.append(('EMAIL', get('email').strip(), student_text))
+
+        results = []
+        for channel, recipient, message in targets:
             # Reserve the slot first; the UNIQUE key makes repeats a no-op
             cur = conn.execute(
                 '''
@@ -229,15 +267,15 @@ class ParentNotifier:
                 (student_id, event_key, kind, channel, recipient, message, status)
                 VALUES (?, ?, ?, ?, ?, ?, 'PENDING')
                 ''',
-                (student['student_id'], event_key, kind, channel, recipient, text)
+                (student['student_id'], event_key, kind, channel, recipient, message)
             )
             conn.commit()
             if cur.rowcount == 0:
                 continue
             if channel == 'SMS':
-                ok, error = self._send_sms(recipient, text)
+                ok, error = self._send_sms(recipient, message)
             else:
-                ok, error = self._send_email(recipient, f'{COLLEGE} attendance alert', text)
+                ok, error = self._send_email(recipient, f'{COLLEGE} attendance alert', message)
             conn.execute(
                 '''
                 UPDATE parent_notifications SET status = ?, error = ?
@@ -250,6 +288,71 @@ class ParentNotifier:
                             'recipient': recipient, 'sent': ok, 'error': error})
         return results
 
+    def notify_weekly_summaries(self, period_key, department=None, semester=None, section=None):
+        """E-mail every student their subject-wise attendance (once per week)."""
+        if not self.email_enabled:
+            return []
+        conn = self.get_connection()
+        try:
+            query = "SELECT * FROM students WHERE TRIM(COALESCE(email, '')) != ''"
+            params = []
+            for col, val in (('department', department), ('semester', semester), ('section', section)):
+                if val:
+                    query += f' AND CAST({col} AS TEXT) = ?'
+                    params.append(str(val))
+            results = []
+            for st in conn.execute(query, params).fetchall():
+                rows = conn.execute(
+                    '''
+                    SELECT s.subject, SUM(CASE WHEN a.status = 'Present' THEN 1 ELSE 0 END) AS present,
+                           COUNT(*) AS total
+                    FROM attendance a JOIN attendance_sessions s ON s.session_id = a.session_id
+                    WHERE a.student_id = ? AND s.status = 'ENDED'
+                    GROUP BY s.subject ORDER BY s.subject
+                    ''',
+                    (st['student_id'],)
+                ).fetchall()
+                if not rows:
+                    continue
+                m = MIN_PERCENT / 100.0
+                lines = []
+                for r in rows:
+                    pct = round(100.0 * r['present'] / r['total'], 1)
+                    if pct >= MIN_PERCENT:
+                        note = f"can miss {int(r['present'] / m - r['total'] + 1e-9)} more"
+                    else:
+                        need = -(-(m * r['total'] - r['present']) // (1 - m))
+                        note = f'below {int(MIN_PERCENT)}%: attend the next {int(need)}'
+                    lines.append(f"  {r['subject']:<10} {r['present']}/{r['total']}  {pct}%  ({note})")
+                body = (f"Dear {st['name']},\n\nYour attendance this week ({period_key}):\n\n"
+                        + '\n'.join(lines)
+                        + f"\n\nThe VTU minimum is {int(MIN_PERCENT)}% in each subject.\n"
+                          f"Portal: {os.environ.get('PORTAL_URL', '')}\n\n- {COLLEGE} EduLens")
+                key = f'weekly:{period_key}'
+                cur = conn.execute(
+                    '''
+                    INSERT OR IGNORE INTO parent_notifications
+                    (student_id, event_key, kind, channel, recipient, message, status)
+                    VALUES (?, ?, 'WEEKLY', 'EMAIL', ?, ?, 'PENDING')
+                    ''',
+                    (st['student_id'], key, st['email'].strip(), body)
+                )
+                conn.commit()
+                if cur.rowcount == 0:
+                    continue
+                ok, error = self._send_email(st['email'].strip(), f'{COLLEGE} weekly attendance', body)
+                conn.execute(
+                    "UPDATE parent_notifications SET status = ?, error = ? "
+                    "WHERE student_id = ? AND event_key = ? AND channel = 'EMAIL'",
+                    ('SENT' if ok else 'FAILED', error, st['student_id'], key)
+                )
+                conn.commit()
+                results.append({'studentId': st['student_id'], 'channel': 'EMAIL',
+                                'recipient': st['email'].strip(), 'sent': ok, 'error': error})
+            return results
+        finally:
+            conn.close()
+
     def _send_sms(self, phone, text):
         if not phone:
             return False, 'invalid phone number'
@@ -258,6 +361,18 @@ class ParentNotifier:
             if provider == 'log':
                 print(f'[PARENT SMS to {phone}] {text}', flush=True)
                 return True, None
+            if provider == 'android_gateway':
+                url = os.environ['ANDROID_GATEWAY_URL'].rstrip('/')
+                user = os.environ.get('ANDROID_GATEWAY_USER', '')
+                pwd = os.environ.get('ANDROID_GATEWAY_PASSWORD', '')
+                auth = base64.b64encode(f'{user}:{pwd}'.encode()).decode()
+                status, body = _post(
+                    f'{url}/message',
+                    json_body={'message': text, 'phoneNumbers': ['+91' + phone]},
+                    headers={'Authorization': f'Basic {auth}'},
+                )
+                ok = status in (200, 201, 202)
+                return ok, None if ok else body[:300]
             if provider == 'fast2sms':
                 status, body = _post(
                     'https://www.fast2sms.com/dev/bulkV2',
