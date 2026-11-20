@@ -165,6 +165,14 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
     });
   }
 
+  void _markAll(bool present) {
+    setState(() {
+      for (final r in _rows) {
+        r.present = present;
+      }
+    });
+  }
+
   Widget _field(TextEditingController c, String label, {String? hint}) => Expanded(
         child: TextField(
           controller: c,
@@ -264,8 +272,8 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                 ),
                 const SizedBox(height: 8),
                 Row(children: [
-                  TextButton(onPressed: () => setState(() => _rows.forEach((r) => r.present = true)), child: const Text('All present')),
-                  TextButton(onPressed: () => setState(() => _rows.forEach((r) => r.present = false)), child: const Text('All absent')),
+                  TextButton(onPressed: () => _markAll(true), child: const Text('All present')),
+                  TextButton(onPressed: () => _markAll(false), child: const Text('All absent')),
                 ]),
                 if (_rows.isEmpty) const EmptyNote('No students on this roster. Ask the admin to import it.'),
                 for (final r in _rows)

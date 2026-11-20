@@ -5,7 +5,7 @@
 set -euo pipefail
 cd "$(dirname "$0")"
 
-flutter create . --org in.svit --project-name edulens --platforms=android,ios >/dev/null
+flutter create . --org edu.svit --project-name edulens --platforms=android,ios >/dev/null
 flutter pub get
 
 MANIFEST=android/app/src/main/AndroidManifest.xml
