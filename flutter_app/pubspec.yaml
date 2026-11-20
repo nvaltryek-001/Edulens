@@ -1,0 +1,25 @@
+name: edulens
+description: EduLens - face-recognition attendance for Sai Vidya Institute of Technology (SVIT).
+publish_to: 'none'
+version: 2.0.0+2
+
+environment:
+  sdk: '>=3.6.0 <4.0.0'
+  flutter: '>=3.27.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  http: ^1.2.2
+  image_picker: ^1.1.2
+  shared_preferences: ^2.3.2
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^4.0.0
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/svit_logo.jpeg
