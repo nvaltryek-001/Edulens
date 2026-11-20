@@ -116,3 +116,9 @@ backend/config/firebase-service-account.json
 
 # Android build-time values (local overrides)
 android.secrets.properties
+
+# Real student data (never commit: the repository is public)
+private_data/
+*.xlsx
+roster_*.csv
+credentials_*.csv

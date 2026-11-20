@@ -74,7 +74,7 @@
   <h2 class="center">EduLens</h2>
   <p class="hint center">Sai Vidya Institute of Technology · Smart Attendance</p>
   <form id="loginForm">
-    <label for="lu">Username</label>
+    <label for="lu">Username, USN or college e-mail</label>
     <input id="lu" autocomplete="username" required>
     <label for="lp" style="margin-top:10px">Password</label>
     <input id="lp" type="password" autocomplete="current-password" required>
@@ -241,6 +241,18 @@
         <div id="importMsg"></div>
       </div>
       <div class="card">
+        <h2>Student logins</h2>
+        <p class="hint">Creates a login for every imported student who has none. Username = USN; students can also sign in with their college e-mail. Temporary passwords are shown once: download the sheet, or e-mail them to students (needs SMTP in .env).</p>
+        <div class="grid">
+          <div><label>Department</label><input id="caDept" placeholder="all"></div>
+          <div><label>Semester</label><input id="caSem" placeholder="all"></div>
+          <div><label>Section</label><input id="caSec" placeholder="all"></div>
+        </div>
+        <label style="margin-top:10px;display:flex;gap:8px;align-items:center"><input type="checkbox" id="caEmail" style="width:auto"> E-mail each student their login</label>
+        <div class="row"><button class="primary" id="createAccounts">Create student logins</button></div>
+        <div id="caMsg"></div>
+      </div>
+      <div class="card">
         <h2>Create account</h2>
         <div class="grid">
           <div><label>Username</label><input id="uName"></div>
@@ -279,6 +291,17 @@
       <div class="card">
         <h2>Upcoming deadlines</h2>
         <table><thead><tr><th>Deadline</th><th>Subject</th><th>Title</th></tr></thead><tbody id="meAssign"></tbody></table>
+      </div>
+    </section>
+
+    <!-- ---------- PASSWORD ---------- -->
+    <section data-tab="account" data-roles="any">
+      <div class="card" style="max-width:420px">
+        <h2>Change password</h2>
+        <label>Current password</label><input id="pwOld" type="password" autocomplete="current-password">
+        <label style="margin-top:10px">New password (8+ characters)</label><input id="pwNew" type="password" autocomplete="new-password">
+        <div class="row"><button class="primary" id="pwSave">Change password</button></div>
+        <div id="pwMsg"></div>
       </div>
     </section>
 
@@ -337,7 +360,7 @@
         body: JSON.stringify({ username: $('lu').value.trim(), password: $('lp').value }) });
       const data = await res.json();
       if (!res.ok || !data.token) throw new Error(data.message || 'Invalid username or password');
-      token = data.token; role = data.role; username = $('lu').value.trim();
+      token = data.token; role = data.role; username = data.username || $('lu').value.trim();
       store.set('edulens_token', token); store.set('edulens_role', role); store.set('edulens_user', username);
       boot();
     } catch (err) { show('loginMsg', err.message, false); }
@@ -360,8 +383,9 @@
     ['assignments', 'Deadlines', 'staff'],
     ['students', 'Students', 'admin'],
     ['me', 'My attendance', 'student'],
+    ['account', 'Password', 'any'],
   ];
-  const allowed = r => r === 'staff' ? isStaff() : r === 'admin' ? isAdmin() : role === 'student';
+  const allowed = r => r === 'any' ? true : r === 'staff' ? isStaff() : r === 'admin' ? isAdmin() : role === 'student';
 
   function openTab(name) {
     document.querySelectorAll('nav button').forEach(b => b.classList.toggle('active', b.dataset.tab === name));
@@ -656,6 +680,32 @@
       await api(`/api/students/${encodeURIComponent(sid)}/parent`, { method: 'PUT', body: { parentPhone: input.value.trim() } });
       e.target.textContent = 'Saved';
     } catch (err) { e.target.textContent = 'Error'; e.target.title = err.message; }
+  };
+
+  $('createAccounts').onclick = async () => {
+    const body = { department: $('caDept').value.trim(), semester: $('caSem').value.trim(),
+      section: $('caSec').value.trim(), sendEmail: $('caEmail').checked };
+    try {
+      const r = await api('/api/students/create-accounts', { body });
+      if (r.created) {
+        const csv = 'usn,name,email,temporary_password\n' + r.accounts.map(a =>
+          [a.usn, a.name, a.email, a.password].map(v => '"' + String(v).replace(/"/g, '""') + '"').join(',')).join('\n');
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }));
+        link.download = 'edulens_student_logins.csv';
+        link.click();
+      }
+      show('caMsg', `Created ${r.created} logins` + (body.sendEmail ? `, e-mailed ${r.emailed}` : '') +
+        (r.created ? '. The password sheet was downloaded; keep it private.' : ' (everyone already has one).'), true);
+    } catch (err) { show('caMsg', err.message, false); }
+  };
+
+  $('pwSave').onclick = async () => {
+    try {
+      const r = await api('/api/me/password', { body: { currentPassword: $('pwOld').value, newPassword: $('pwNew').value } });
+      $('pwOld').value = $('pwNew').value = '';
+      show('pwMsg', r.message, true);
+    } catch (err) { show('pwMsg', err.message, false); }
   };
 
   // ------------------------------------------------------------ student portal

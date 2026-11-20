@@ -448,3 +448,95 @@ def subject_shortage(current_user):
                 'percent': pct, 'mustAttend': must, 'parentPhoneOnFile': bool(r['parent_phone']),
             })
     return jsonify({'success': True, 'threshold': threshold, 'count': len(out), 'students': out})
+
+
+# ------------------------------------------------------------------
+# STUDENT ACCOUNTS IN BULK + PASSWORD CHANGE
+# ------------------------------------------------------------------
+
+def _temp_password():
+    import secrets
+    alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789'
+    return ''.join(secrets.choice(alphabet) for _ in range(10))
+
+
+@portal.route('/api/students/create-accounts', methods=['POST'])
+@token_required
+def create_student_accounts(current_user):
+    """
+    Create a login for every student on the roster who has none.
+    Username = USN; students may also sign in with their college e-mail.
+    Returns the temporary passwords ONCE (they are stored only as hashes);
+    with "sendEmail": true they are also e-mailed to each student.
+    """
+    if current_user['role'] != 'administrator':
+        return jsonify({'success': False, 'error': 'Unauthorized'}), 403
+
+    data = request.json or {}
+    query = '''
+        SELECT s.student_id, s.usn, s.name, s.email FROM students s
+        WHERE NOT EXISTS (
+            SELECT 1 FROM users u WHERE u.student_id = s.student_id OR u.username = s.usn
+        )
+    '''
+    params = []
+    for arg in ('department', 'semester', 'section'):
+        if data.get(arg):
+            query += f' AND CAST(s.{arg} AS TEXT) = ?'
+            params.append(str(data[arg]))
+
+    created = []
+    conn = get_db_connection()
+    try:
+        for s in conn.execute(query, params).fetchall():
+            username = (s['usn'] or s['student_id']).strip()
+            password = _temp_password()
+            conn.execute(
+                'INSERT INTO users (username, password_hash, role, student_id) VALUES (?, ?, ?, ?)',
+                (username, generate_password_hash(password), 'student', s['student_id'])
+            )
+            created.append({'usn': username, 'name': s['name'], 'email': (s['email'] or '').strip(),
+                            'password': password})
+        conn.commit()
+    finally:
+        conn.close()
+
+    emailed = 0
+    if data.get('sendEmail') and created:
+        from services.parent_notifier import ParentNotifier
+        notifier = ParentNotifier(get_db_connection)
+        portal_url = os.environ.get('PORTAL_URL', request.host_url.rstrip('/') + '/portal')
+        for c in created:
+            if not c['email']:
+                continue
+            ok, _ = notifier._send_email(
+                c['email'], 'Your EduLens attendance account',
+                f"Dear {c['name']},\n\nYour EduLens account is ready.\n\n"
+                f"Portal: {portal_url}\nLogin: {c['usn']} (or {c['email']})\n"
+                f"Temporary password: {c['password']}\n\n"
+                "Please change your password after signing in.\n\n- SVIT EduLens"
+            )
+            emailed += 1 if ok else 0
+
+    return jsonify({'success': True, 'created': len(created), 'emailed': emailed, 'accounts': created})
+
+
+@portal.route('/api/me/password', methods=['POST'])
+@token_required
+def change_password(current_user):
+    from werkzeug.security import check_password_hash
+    data = request.json or {}
+    new = str(data.get('newPassword', ''))
+    if len(new) < 8:
+        return jsonify({'success': False, 'error': 'New password must be at least 8 characters'}), 400
+    conn = get_db_connection()
+    try:
+        user = conn.execute('SELECT * FROM users WHERE username = ?', (current_user['username'],)).fetchone()
+        if not user or not check_password_hash(user['password_hash'], str(data.get('currentPassword', ''))):
+            return jsonify({'success': False, 'error': 'Current password is incorrect'}), 400
+        conn.execute('UPDATE users SET password_hash = ? WHERE user_id = ?',
+                     (generate_password_hash(new), user['user_id']))
+        conn.commit()
+    finally:
+        conn.close()
+    return jsonify({'success': True, 'message': 'Password changed'})
