@@ -16,6 +16,7 @@ from database import get_db_connection, init_db
 from auth import generate_token, token_required
 from services.notification_service import NotificationService
 from services.parent_notifier import ParentNotifier
+from portal_routes import portal, init_portal_tables
 
 
 # ============================================================
@@ -36,6 +37,8 @@ app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 app.config['DATASET_FOLDER'] = DATASET_FOLDER
 
 init_db()
+init_portal_tables()
+app.register_blueprint(portal)
 
 ml_core = EduLensMLCore(
     embeddings_path=os.environ.get('EDULENS_EMBEDDINGS_PATH', 'embeddings.pkl')
@@ -2430,6 +2433,9 @@ def get_low_attendance(current_user):
 @app.route('/api/notifications', methods=['POST'])
 @token_required
 def send_notification(current_user):
+
+    if current_user['role'] not in STAFF_ROLES:
+        return jsonify({'success': False, 'error': 'Unauthorized'}), 403
 
     data = request.json or {}
 
