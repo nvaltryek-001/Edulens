@@ -113,3 +113,6 @@ backend/config/firebase-service-account.json
 *.db
 *.sqlite
 *.sqlite3
+
+# Android build-time values (local overrides)
+android.secrets.properties
