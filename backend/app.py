@@ -1,5 +1,9 @@
 import os
+import io
+import csv
 import json
+import uuid
+from datetime import datetime
 
 from flask import Flask, request, jsonify
 from flask_cors import CORS
@@ -11,6 +15,7 @@ from ml_core import EduLensMLCore
 from database import get_db_connection, init_db
 from auth import generate_token, token_required
 from services.notification_service import NotificationService
+from services.parent_notifier import ParentNotifier
 
 
 # ============================================================
@@ -32,9 +37,151 @@ app.config['DATASET_FOLDER'] = DATASET_FOLDER
 
 init_db()
 
-ml_core = EduLensMLCore()
+ml_core = EduLensMLCore(
+    embeddings_path=os.environ.get('EDULENS_EMBEDDINGS_PATH', 'embeddings.pkl')
+)
 
 notification_service = NotificationService()
+
+parent_notifier = ParentNotifier(get_db_connection)
+
+STAFF_ROLES = ('administrator', 'hod', 'teacher', 'faculty')
+ADMIN_ROLES = ('administrator', 'hod')
+ALLOWED_IMAGE_EXTENSIONS = {'.jpg', '.jpeg', '.png'}
+
+app.config['MAX_CONTENT_LENGTH'] = 25 * 1024 * 1024  # 25 MB per request
+
+
+def allowed_image(filename):
+    return os.path.splitext(filename or '')[1].lower() in ALLOWED_IMAGE_EXTENSIONS
+
+
+def unique_upload_name(filename):
+    ext = os.path.splitext(secure_filename(filename or ''))[1].lower() or '.jpg'
+    return f'{uuid.uuid4().hex}{ext}'
+
+
+def get_roster(conn, session):
+    """Students who belong to the session's department, semester and section."""
+    return conn.execute(
+        '''
+        SELECT * FROM students
+        WHERE department = ? AND CAST(semester AS TEXT) = ? AND section = ?
+        ORDER BY usn, name
+        ''',
+        (session['department'], str(session['semester']), session['section'])
+    ).fetchall()
+
+
+def can_manage_session(current_user, session):
+    """Admins and HODs can manage any session; faculty only their own."""
+    if current_user['role'] in ADMIN_ROLES:
+        return True
+    owner = session['created_by'] if 'created_by' in session.keys() else None
+    return not owner or owner == current_user['username']
+
+
+def session_to_json(row):
+    if row is None:
+        return None
+    return {
+        'sessionId': row['session_id'],
+        'subject': row['subject'],
+        'faculty': row['faculty'],
+        'department': row['department'],
+        'semester': row['semester'],
+        'section': row['section'],
+        'startTime': row['start_time'],
+        'endTime': row['end_time'],
+        'status': row['status'],
+    }
+
+
+def finalize_session(conn, session, present_ids, actor, manual_reason=''):
+    """
+    Write the official register for a session in one transaction:
+    Present for confirmed students, Absent for everyone else on the roster.
+    Unknown faces never make anyone absent; absence comes only from the roster.
+    """
+    session_id = session['session_id']
+    roster_ids = [row['student_id'] for row in get_roster(conn, session)]
+    roster_set = set(roster_ids)
+
+    candidates = {
+        row['student_id']: row['confidence']
+        for row in conn.execute(
+            'SELECT student_id, confidence FROM session_candidates WHERE session_id = ?',
+            (session_id,)
+        ).fetchall()
+    }
+
+    if present_ids is None:
+        present = set(candidates) & roster_set
+    else:
+        present = {str(sid) for sid in present_ids}
+        unknown = present - roster_set
+        if unknown:
+            raise ValueError(
+                'These students are not on this section roster: ' + ', '.join(sorted(unknown))
+            )
+
+    manual_added = sorted(present - set(candidates))
+    ai_rejected = sorted((set(candidates) & roster_set) - present)
+
+    start = session['start_time'] or datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    date_part, _, time_part = start.partition(' ')
+
+    conn.execute('DELETE FROM attendance WHERE session_id = ?', (session_id,))
+    for student_id in roster_ids:
+        is_present = student_id in present
+        conn.execute(
+            '''
+            INSERT INTO attendance
+            (student_id, date, time, status, subject, faculty, session_id, source, confidence)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ''',
+            (
+                student_id, date_part, time_part or '00:00:00',
+                'Present' if is_present else 'Absent',
+                session['subject'], session['faculty'], session_id,
+                ('AI' if student_id in candidates else 'MANUAL') if is_present else 'ROSTER',
+                candidates.get(student_id)
+            )
+        )
+
+    conn.execute(
+        '''
+        UPDATE attendance_sessions
+        SET status = 'ENDED', end_time = ?, finalized_by = ?
+        WHERE session_id = ?
+        ''',
+        (datetime.now().strftime('%Y-%m-%d %H:%M:%S'), actor, session_id)
+    )
+
+    conn.execute(
+        'INSERT INTO logs (event) VALUES (?)',
+        (json.dumps({
+            'event': 'SESSION_CONFIRMED',
+            'sessionId': session_id,
+            'by': actor,
+            'present': len(present),
+            'absent': len(roster_ids) - len(present),
+            'manualAdded': manual_added,
+            'aiRejected': ai_rejected,
+            'reason': manual_reason,
+        }),)
+    )
+    conn.commit()
+
+    return {
+        'total': len(roster_ids),
+        'present': len(present),
+        'absent': len(roster_ids) - len(present),
+        'manualAdded': manual_added,
+        'aiRejected': ai_rejected,
+    }
+
+
 
 
 # ============================================================
@@ -196,9 +343,12 @@ def add_student(current_user):
                 semester,
                 section,
                 email,
-                phone_number
+                phone_number,
+                parent_name,
+                parent_phone,
+                parent_email
             )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ''',
             (
                 data['student_id'],
@@ -207,18 +357,29 @@ def add_student(current_user):
                 data['department'],
                 data['semester'],
                 data['section'],
-                data['email'],
-                data['phone_number']
+                data.get('email', ''),
+                data.get('phone_number', ''),
+                data.get('parent_name', ''),
+                data.get('parent_phone', ''),
+                data.get('parent_email', '')
             )
         )
 
         conn.commit()
 
-    except Exception as e:
+    except KeyError as e:
 
         return jsonify({
             'success': False,
-            'error': str(e)
+            'error': f'Missing field: {e}'
+        }), 400
+
+    except Exception:
+
+        app.logger.exception('Add student failed')
+        return jsonify({
+            'success': False,
+            'error': 'Could not add student (duplicate student_id?)'
         }), 400
 
     finally:
@@ -285,6 +446,10 @@ def enroll_student(current_user):
         'phoneNumber',
         ''
     ).strip()
+
+    parent_name = request.form.get('parentName', '').strip()
+    parent_phone = request.form.get('parentPhone', '').strip()
+    parent_email = request.form.get('parentEmail', '').strip()
 
     if not student_id:
 
@@ -458,7 +623,10 @@ def enroll_student(current_user):
                     semester = ?,
                     section = ?,
                     email = ?,
-                    phone_number = ?
+                    phone_number = ?,
+                    parent_name = COALESCE(NULLIF(?, ''), parent_name),
+                    parent_phone = COALESCE(NULLIF(?, ''), parent_phone),
+                    parent_email = COALESCE(NULLIF(?, ''), parent_email)
                 WHERE student_id = ?
                 ''',
                 (
@@ -469,6 +637,9 @@ def enroll_student(current_user):
                     section,
                     email,
                     phone_number,
+                    parent_name,
+                    parent_phone,
+                    parent_email,
                     student_id
                 )
             )
@@ -486,9 +657,12 @@ def enroll_student(current_user):
                     semester,
                     section,
                     email,
-                    phone_number
+                    phone_number,
+                    parent_name,
+                    parent_phone,
+                    parent_email
                 )
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 ''',
                 (
                     student_id,
@@ -498,7 +672,10 @@ def enroll_student(current_user):
                     semester,
                     section,
                     email,
-                    phone_number
+                    phone_number,
+                    parent_name,
+                    parent_phone,
+                    parent_email
                 )
             )
 
@@ -587,346 +764,149 @@ def train_model(current_user):
 @app.route('/api/recognize', methods=['POST'])
 @token_required
 def recognize_frame(current_user):
+    """
+    Detect faces in one classroom photo and record them as CANDIDATES for the
+    active session. Nothing is written to the attendance register here; the
+    teacher confirms the final list with /api/attendance/confirm (or
+    /api/sessions/end), which writes Present and Absent rows together.
+    Call this up to four times per session (left, centre, right, back rows);
+    a student seen in several photos is counted once.
+    """
 
-    if current_user['role'] not in [
-        'administrator',
-        'teacher',
-        'faculty'
-    ]:
+    if current_user['role'] not in STAFF_ROLES:
+        return jsonify({'success': False, 'error': 'Unauthorized'}), 403
 
-        return jsonify({
-            'success': False,
-            'error': 'Unauthorized'
-        }), 403
-
-    if 'image' not in request.files:
-
-        return jsonify({
-            'success': False,
-            'error': 'No image file provided'
-        }), 400
+    if 'image' not in request.files or request.files['image'].filename == '':
+        return jsonify({'success': False, 'error': 'No image file provided'}), 400
 
     file = request.files['image']
 
-    if file.filename == '':
-
-        return jsonify({
-            'success': False,
-            'error': 'No image selected'
-        }), 400
-
-    subject = request.form.get(
-        'subject',
-        ''
-    ).strip()
-
-    faculty = request.form.get(
-        'faculty',
-        ''
-    ).strip()
-
-    department = request.form.get(
-        'department',
-        ''
-    ).strip()
-
-    semester = request.form.get(
-        'semester',
-        ''
-    ).strip()
-
-    section = request.form.get(
-        'section',
-        ''
-    ).strip()
-
-    missing = []
-
-    if not subject:
-        missing.append('subject')
-
-    if not faculty:
-        missing.append('faculty')
-
-    if not department:
-        missing.append('department')
-
-    if not semester:
-        missing.append('semester')
-
-    if not section:
-        missing.append('section')
-
+    fields = {
+        key: request.form.get(key, '').strip()
+        for key in ('subject', 'faculty', 'department', 'semester', 'section')
+    }
+    missing = [key for key, value in fields.items() if not value]
     if missing:
-
         return jsonify({
             'success': False,
             'error': 'Missing class information',
             'missingFields': missing
         }), 400
 
-    filename = secure_filename(
-        file.filename
-    )
+    if not allowed_image(file.filename):
+        return jsonify({'success': False, 'error': 'Only JPG or PNG images are accepted'}), 400
 
-    filepath = os.path.join(
-        app.config['UPLOAD_FOLDER'],
-        filename
-    )
-
+    # Unique name: two teachers uploading "image.jpg" at once must not collide
+    filepath = os.path.join(app.config['UPLOAD_FOLDER'], unique_upload_name(file.filename))
     file.save(filepath)
 
     conn = None
-
     try:
-
         conn = get_db_connection()
-
-        # ----------------------------------------------------
-        # CHECK ACTIVE SESSION FIRST
-        # ----------------------------------------------------
 
         active_session = conn.execute(
             '''
-            SELECT *
-            FROM attendance_sessions
-            WHERE status = 'ACTIVE'
-              AND subject = ?
-              AND faculty = ?
-              AND department = ?
-              AND semester = ?
-              AND section = ?
-            ORDER BY session_id DESC
-            LIMIT 1
+            SELECT * FROM attendance_sessions
+            WHERE status = 'ACTIVE' AND subject = ? AND faculty = ?
+              AND department = ? AND semester = ? AND section = ?
+            ORDER BY session_id DESC LIMIT 1
             ''',
-            (
-                subject,
-                faculty,
-                department,
-                semester,
-                section
-            )
+            (fields['subject'], fields['faculty'], fields['department'],
+             fields['semester'], fields['section'])
         ).fetchone()
 
         if not active_session:
-
             return jsonify({
                 'success': False,
                 'students': [],
-                'error':
-                    'No active attendance session found for this class. '
-                    'Start the attendance session first.'
+                'error': 'No active attendance session found for this class. '
+                         'Start the attendance session first.'
             }), 400
 
+        if not can_manage_session(current_user, active_session):
+            return jsonify({'success': False, 'error': 'This session belongs to another faculty member'}), 403
+
         session_id = active_session['session_id']
+        roster = get_roster(conn, active_session)
+        student_db = {row['student_id']: dict(row) for row in roster}
 
-        # ----------------------------------------------------
-        # LOAD STUDENTS
-        # ----------------------------------------------------
+        if not student_db:
+            return jsonify({
+                'success': False,
+                'students': [],
+                'error': 'No students are registered for this department, semester and section.'
+            }), 400
 
-        rows = conn.execute(
-            '''
-            SELECT *
-            FROM students
-            '''
-        ).fetchall()
-
-        student_db = {
-            row['student_id']: dict(row)
-            for row in rows
-        }
-
-        # ----------------------------------------------------
-        # FACE RECOGNITION
-        # ----------------------------------------------------
-
+        # Match ONLY against this section's roster
         students = ml_core.recognize_faces(
             filepath,
-            student_db
+            student_db,
+            allowed_student_ids=set(student_db.keys())
         )
 
-        from datetime import datetime
-
-        now = datetime.now()
-
-        today = now.strftime(
-            '%Y-%m-%d'
-        )
-
-        current_time = now.strftime(
-            '%H:%M:%S'
-        )
-
-        attendance_added = []
-        attendance_duplicate = []
-
-        # ----------------------------------------------------
-        # PROCESS RECOGNIZED STUDENTS
-        # ----------------------------------------------------
+        now = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        added, duplicates = [], []
 
         for student in students:
-
-            student_id = student.get(
-                'studentId'
-            )
-
-            if not student_id:
+            student_id = student.get('studentId')
+            if student_id not in student_db:
                 continue
-
-            student_info = student_db.get(
-                student_id
-            )
-
-            if not student_info:
-                continue
-
-            # ------------------------------------------------
-            # CLASS VALIDATION
-            # ------------------------------------------------
-
-            if (
-                student_info.get('department')
-                != department
-                or str(
-                    student_info.get('semester')
-                )
-                != str(semester)
-                or student_info.get('section')
-                != section
-            ):
-                continue
-
-            # ------------------------------------------------
-            # DUPLICATE CHECK FOR THIS SESSION
-            # ------------------------------------------------
-
-            existing = conn.execute(
+            cur = conn.execute(
                 '''
-                SELECT attendance_id
-                FROM attendance
-                WHERE student_id = ?
-                  AND session_id = ?
-                  AND status = 'Present'
-                LIMIT 1
+                INSERT OR IGNORE INTO session_candidates
+                (session_id, student_id, confidence, detected_at)
+                VALUES (?, ?, ?, ?)
                 ''',
-                (
-                    student_id,
-                    session_id
-                )
-            ).fetchone()
-
-            if existing:
-
-                attendance_duplicate.append(
-                    student_id
-                )
-
-                continue
-
-            # ------------------------------------------------
-            # INSERT ATTENDANCE
-            # ------------------------------------------------
-
-            conn.execute(
-                '''
-                INSERT INTO attendance
-                (
-                    student_id,
-                    date,
-                    time,
-                    status,
-                    subject,
-                    faculty,
-                    session_id
-                )
-                VALUES (?, ?, ?, ?, ?, ?, ?)
-                ''',
-                (
-                    student_id,
-                    today,
-                    current_time,
-                    'Present',
-                    subject,
-                    faculty,
-                    session_id
-                )
+                (session_id, student_id, student.get('confidence'), now)
             )
-
-            attendance_added.append(
-                student_id
-            )
+            if cur.rowcount:
+                added.append(student_id)
+            else:
+                duplicates.append(student_id)
+                conn.execute(
+                    '''
+                    UPDATE session_candidates SET confidence = MAX(COALESCE(confidence, 0), ?)
+                    WHERE session_id = ? AND student_id = ?
+                    ''',
+                    (student.get('confidence') or 0, session_id, student_id)
+                )
+            student['attendanceStatus'] = 'Detected - confirm to save'
 
         conn.commit()
 
+        candidate_count = conn.execute(
+            'SELECT COUNT(*) FROM session_candidates WHERE session_id = ?', (session_id,)
+        ).fetchone()[0]
+
         return jsonify({
-
             'success': True,
-
             'students': students,
-
-            'attendanceAdded':
-                attendance_added,
-
-            'duplicatesSkipped':
-                attendance_duplicate,
-
-            'sessionId':
-                session_id,
-
-            'class': {
-
-                'department':
-                    department,
-
-                'semester':
-                    semester,
-
-                'section':
-                    section,
-
-                'subject':
-                    subject,
-
-                'faculty':
-                    faculty
-            }
+            'attendanceAdded': added,
+            'duplicatesSkipped': duplicates,
+            'pendingReview': True,
+            'sessionId': session_id,
+            'rosterSize': len(student_db),
+            'candidatesSoFar': candidate_count,
+            'class': fields
         })
 
-    except Exception as e:
-
-        print(
-            f'Recognition/Attendance Error: {e}'
-        )
-
+    except Exception:
+        app.logger.exception('Recognition failed')
         if conn:
-
-            try:
-                conn.rollback()
-            except Exception:
-                pass
-
+            conn.rollback()
         return jsonify({
             'success': False,
             'students': [],
-            'error': str(e)
+            'error': 'Recognition failed. Check the photo and try again.'
         }), 500
 
     finally:
-
         if conn:
-
-            try:
-                conn.close()
-            except Exception:
-                pass
-
-        if os.path.exists(filepath):
-
-            try:
-                os.remove(filepath)
-            except Exception:
-                pass
-
+            conn.close()
+        try:
+            os.remove(filepath)
+        except OSError:
+            pass
 
 # ============================================================
 # HEALTH
@@ -1214,372 +1194,156 @@ def get_weekly_summary(current_user):
 @token_required
 def start_attendance_session(current_user):
 
-    if current_user['role'] not in [
-        'administrator',
-        'faculty',
-        'teacher'
-    ]:
-
-        return jsonify({
-            'success': False,
-            'message': 'Unauthorized'
-        }), 403
+    if current_user['role'] not in STAFF_ROLES:
+        return jsonify({'success': False, 'message': 'Unauthorized'}), 403
 
     data = request.json or {}
-
-    subject = str(
-        data.get('subject', '')
-    ).strip()
-
-    faculty = str(
-        data.get('faculty', '')
-    ).strip()
-
-    department = str(
-        data.get('department', '')
-    ).strip()
-
-    semester = str(
-        data.get('semester', '')
-    ).strip()
-
-    section = str(
-        data.get('section', '')
-    ).strip()
-
-    if not subject:
-        return jsonify({
-            'success': False,
-            'message': 'Subject is required'
-        }), 400
-
-    if not faculty:
-        return jsonify({
-            'success': False,
-            'message': 'Faculty is required'
-        }), 400
-
-    if not department:
-        return jsonify({
-            'success': False,
-            'message': 'Department is required'
-        }), 400
-
-    if not semester:
-        return jsonify({
-            'success': False,
-            'message': 'Semester is required'
-        }), 400
-
-    if not section:
-        return jsonify({
-            'success': False,
-            'message': 'Section is required'
-        }), 400
+    fields = {
+        key: str(data.get(key, '')).strip()
+        for key in ('subject', 'faculty', 'department', 'semester', 'section')
+    }
+    for key, value in fields.items():
+        if not value:
+            return jsonify({'success': False, 'message': f'{key.capitalize()} is required'}), 400
 
     conn = get_db_connection()
-
     try:
-
+        # Block only a clash for THIS faculty member or THIS section,
+        # so other classrooms can run sessions at the same time.
         active_session = conn.execute(
             '''
-            SELECT *
-            FROM attendance_sessions
+            SELECT * FROM attendance_sessions
             WHERE status = 'ACTIVE'
-            ORDER BY session_id DESC
-            LIMIT 1
-            '''
+              AND (
+                    created_by = ?
+                 OR (department = ? AND semester = ? AND section = ?)
+              )
+            ORDER BY session_id DESC LIMIT 1
+            ''',
+            (current_user['username'], fields['department'], fields['semester'], fields['section'])
         ).fetchone()
 
         if active_session:
-
             return jsonify({
-
                 'success': False,
-
-                'message':
-                    'An attendance session is already active',
-
-                'session': {
-
-                    'sessionId':
-                        active_session['session_id'],
-
-                    'subject':
-                        active_session['subject'],
-
-                    'faculty':
-                        active_session['faculty'],
-
-                    'department':
-                        active_session['department'],
-
-                    'semester':
-                        active_session['semester'],
-
-                    'section':
-                        active_session['section'],
-
-                    'startTime':
-                        active_session['start_time'],
-
-                    'endTime':
-                        active_session['end_time'],
-
-                    'status':
-                        active_session['status']
-                }
-
+                'message': 'An attendance session is already active for you or for this section. '
+                           'Confirm or end it first.',
+                'session': session_to_json(active_session)
             }), 409
 
-        from datetime import datetime
-
-        start_time = datetime.now().strftime(
-            '%Y-%m-%d %H:%M:%S'
-        )
-
+        start_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
         cursor = conn.execute(
             '''
             INSERT INTO attendance_sessions
-            (
-                subject,
-                faculty,
-                department,
-                semester,
-                section,
-                start_time,
-                end_time,
-                status
-            )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            (subject, faculty, department, semester, section, start_time, end_time, status, created_by)
+            VALUES (?, ?, ?, ?, ?, ?, NULL, 'ACTIVE', ?)
             ''',
-            (
-                subject,
-                faculty,
-                department,
-                semester,
-                section,
-                start_time,
-                None,
-                'ACTIVE'
-            )
+            (fields['subject'], fields['faculty'], fields['department'], fields['semester'],
+             fields['section'], start_time, current_user['username'])
         )
-
         conn.commit()
 
-        session_id = cursor.lastrowid
+        session = conn.execute(
+            'SELECT * FROM attendance_sessions WHERE session_id = ?', (cursor.lastrowid,)
+        ).fetchone()
 
         return jsonify({
-
-            'success':
-                True,
-
-            'message':
-                'Attendance session started successfully',
-
-            'session': {
-
-                'sessionId':
-                    session_id,
-
-                'subject':
-                    subject,
-
-                'faculty':
-                    faculty,
-
-                'department':
-                    department,
-
-                'semester':
-                    semester,
-
-                'section':
-                    section,
-
-                'startTime':
-                    start_time,
-
-                'endTime':
-                    None,
-
-                'status':
-                    'ACTIVE'
-            }
-
+            'success': True,
+            'message': 'Attendance session started successfully',
+            'session': session_to_json(session)
         }), 201
 
-    except Exception as e:
-
-        return jsonify({
-
-            'success':
-                False,
-
-            'message':
-                'Failed to start attendance session',
-
-            'error':
-                str(e)
-
-        }), 500
+    except Exception:
+        app.logger.exception('Failed to start session')
+        return jsonify({'success': False, 'message': 'Failed to start attendance session'}), 500
 
     finally:
-
         conn.close()
-
 
 # ============================================================
 # A8 — END ATTENDANCE SESSION
 # ============================================================
 
 @app.route('/api/sessions/end', methods=['POST'])
+@app.route('/api/attendance/confirm', methods=['POST'])
 @token_required
 def end_attendance_session(current_user):
+    """
+    Teacher confirms the register and closes the session.
 
-    if current_user['role'] not in [
-        'administrator',
-        'faculty',
-        'teacher'
-    ]:
+    Body: {
+      "sessionId": 12,
+      "presentStudentIds": ["S001", "S007"],   optional - the reviewed list;
+                                               if omitted, the AI candidates are used
+      "manualReason": "Sitting behind pillar"   optional - why students were added by hand
+    }
 
-        return jsonify({
-            'success': False,
-            'message': 'Unauthorized'
-        }), 403
+    Writes one Present or Absent row for EVERY student on the section roster,
+    in one transaction, then sends absence alerts to parents in the background.
+    """
+
+    if current_user['role'] not in STAFF_ROLES:
+        return jsonify({'success': False, 'message': 'Unauthorized'}), 403
 
     data = request.json or {}
-
-    session_id = data.get(
-        'sessionId'
-    )
-
+    session_id = data.get('sessionId')
     if not session_id:
+        return jsonify({'success': False, 'message': 'sessionId is required'}), 400
 
-        return jsonify({
-            'success': False,
-            'message': 'sessionId is required'
-        }), 400
+    present_ids = data.get('presentStudentIds')
+    if present_ids is not None and not isinstance(present_ids, list):
+        return jsonify({'success': False, 'message': 'presentStudentIds must be a list'}), 400
 
     conn = get_db_connection()
-
     try:
-
         session = conn.execute(
-            '''
-            SELECT *
-            FROM attendance_sessions
-            WHERE session_id = ?
-            ''',
-            (session_id,)
+            'SELECT * FROM attendance_sessions WHERE session_id = ?', (session_id,)
         ).fetchone()
 
         if not session:
-
-            return jsonify({
-                'success': False,
-                'message':
-                    'Attendance session not found'
-            }), 404
+            return jsonify({'success': False, 'message': 'Attendance session not found'}), 404
 
         if session['status'] == 'ENDED':
-
             return jsonify({
                 'success': False,
-                'message':
-                    'Attendance session is already ended'
+                'message': 'Attendance session is already confirmed and locked'
             }), 409
 
-        from datetime import datetime
+        if not can_manage_session(current_user, session):
+            return jsonify({'success': False, 'message': 'This session belongs to another faculty member'}), 403
 
-        end_time = datetime.now().strftime(
-            '%Y-%m-%d %H:%M:%S'
+        summary = finalize_session(
+            conn,
+            session,
+            present_ids,
+            actor=current_user['username'],
+            manual_reason=str(data.get('manualReason', '')).strip()
         )
 
-        conn.execute(
-            '''
-            UPDATE attendance_sessions
-            SET
-                end_time = ?,
-                status = 'ENDED'
-            WHERE session_id = ?
-            ''',
-            (
-                end_time,
-                session_id
-            )
-        )
-
-        conn.commit()
-
-        updated_session = conn.execute(
-            '''
-            SELECT *
-            FROM attendance_sessions
-            WHERE session_id = ?
-            ''',
-            (session_id,)
+        updated = conn.execute(
+            'SELECT * FROM attendance_sessions WHERE session_id = ?', (session_id,)
         ).fetchone()
 
-        return jsonify({
+    except ValueError as exc:
+        conn.rollback()
+        return jsonify({'success': False, 'message': str(exc)}), 400
 
-            'success':
-                True,
-
-            'message':
-                'Attendance session ended successfully',
-
-            'session': {
-
-                'sessionId':
-                    updated_session['session_id'],
-
-                'subject':
-                    updated_session['subject'],
-
-                'faculty':
-                    updated_session['faculty'],
-
-                'department':
-                    updated_session['department'],
-
-                'semester':
-                    updated_session['semester'],
-
-                'section':
-                    updated_session['section'],
-
-                'startTime':
-                    updated_session['start_time'],
-
-                'endTime':
-                    updated_session['end_time'],
-
-                'status':
-                    updated_session['status']
-            }
-
-        })
-
-    except Exception as e:
-
-        return jsonify({
-
-            'success':
-                False,
-
-            'message':
-                'Failed to end attendance session',
-
-            'error':
-                str(e)
-
-        }), 500
+    except Exception:
+        conn.rollback()
+        app.logger.exception('Failed to confirm session')
+        return jsonify({'success': False, 'message': 'Failed to confirm attendance session'}), 500
 
     finally:
-
         conn.close()
 
+    parent_notifier.notify_absentees_async(session_id)
+
+    return jsonify({
+        'success': True,
+        'message': f"Attendance saved: {summary['present']} present, {summary['absent']} absent",
+        'session': session_to_json(updated),
+        'summary': summary
+    })
 
 # ============================================================
 # A8 — GET ATTENDANCE SESSIONS
@@ -1686,110 +1450,80 @@ def get_attendance_sessions(current_user):
 @token_required
 def sync_attendance(current_user):
 
-    if current_user['role'] not in [
-        'administrator',
-        'teacher',
-        'faculty'
-    ]:
-
-        return jsonify({
-            'success': False,
-            'error': 'Unauthorized'
-        }), 403
+    if current_user['role'] not in STAFF_ROLES:
+        return jsonify({'success': False, 'error': 'Unauthorized'}), 403
 
     data = request.json or {}
-
-    if 'attendanceRecords' not in data:
-
-        return jsonify({
-            'success': False,
-            'message': 'Invalid payload'
-        }), 400
-
-    records = data[
-        'attendanceRecords'
-    ]
+    records = data.get('attendanceRecords')
+    if not isinstance(records, list):
+        return jsonify({'success': False, 'message': 'Invalid payload'}), 400
 
     conn = get_db_connection()
-
     synced_count = 0
+    skipped = 0
 
     try:
-
         for record in records:
+            student_id = record.get('studentId')
+            session_id = record.get('sessionId')
+            status = record.get('status')
 
-            existing = conn.execute(
-                '''
-                SELECT attendance_id
-                FROM attendance
-                WHERE student_id = ?
-                  AND date = ?
-                  AND time = ?
-                  AND subject = ?
-                LIMIT 1
-                ''',
-                (
-                    record.get('studentId'),
-                    record.get('date'),
-                    record.get('time'),
-                    record.get('subject')
-                )
-            ).fetchone()
+            if not student_id or status not in ('Present', 'Absent'):
+                skipped += 1
+                continue
+
+            if session_id:
+                session = conn.execute(
+                    'SELECT * FROM attendance_sessions WHERE session_id = ?', (session_id,)
+                ).fetchone()
+                # Offline records may not overwrite a confirmed, locked session
+                if not session or session['status'] == 'ENDED' or not can_manage_session(current_user, session):
+                    skipped += 1
+                    continue
+                existing = conn.execute(
+                    'SELECT 1 FROM attendance WHERE session_id = ? AND student_id = ?',
+                    (session_id, student_id)
+                ).fetchone()
+            else:
+                existing = conn.execute(
+                    '''
+                    SELECT 1 FROM attendance
+                    WHERE student_id = ? AND date = ? AND time = ? AND subject = ?
+                    ''',
+                    (student_id, record.get('date'), record.get('time'), record.get('subject'))
+                ).fetchone()
 
             if existing:
+                skipped += 1
                 continue
 
             conn.execute(
                 '''
                 INSERT INTO attendance
-                (
-                    student_id,
-                    date,
-                    time,
-                    status,
-                    subject,
-                    faculty,
-                    session_id
-                )
-                VALUES (?, ?, ?, ?, ?, ?, ?)
+                (student_id, date, time, status, subject, faculty, session_id, source)
+                VALUES (?, ?, ?, ?, ?, ?, ?, 'OFFLINE_SYNC')
                 ''',
-                (
-                    record.get('studentId'),
-                    record.get('date'),
-                    record.get('time'),
-                    record.get('status'),
-                    record.get('subject'),
-                    record.get('faculty'),
-                    record.get('sessionId')
-                )
+                (student_id, record.get('date'), record.get('time'), status,
+                 record.get('subject'), record.get('faculty'), session_id)
             )
-
             synced_count += 1
 
         conn.commit()
 
-    except Exception as e:
-
+    except Exception:
         conn.rollback()
-
-        return jsonify({
-            'success': False,
-            'message': str(e)
-        }), 500
+        app.logger.exception('Sync failed')
+        return jsonify({'success': False, 'message': 'Sync failed'}), 500
 
     finally:
-
         conn.close()
 
     return jsonify({
-
-        'success':
-            True,
-
-        'message':
-            f'Successfully synced {synced_count} records.'
+        'success': True,
+        'message': f'Successfully synced {synced_count} records.',
+        'synced': synced_count,
+        'skipped': skipped
     })
-
 
 # ============================================================
 # REPORTS
@@ -2445,7 +2179,7 @@ def get_low_attendance(current_user):
 
         threshold_raw = request.args.get(
             'threshold',
-            '75'
+            '85'
         ).strip()
 
         department = request.args.get(
@@ -2780,6 +2514,248 @@ def send_notification(current_user):
             'error': str(e)
         }), 500
 
+
+# ============================================================
+# TEACHER REVIEW - ROSTER WITH AI CANDIDATES
+# ============================================================
+
+@app.route('/api/sessions/<int:session_id>/review', methods=['GET'])
+@token_required
+def review_session(current_user, session_id):
+
+    if current_user['role'] not in STAFF_ROLES:
+        return jsonify({'success': False, 'error': 'Unauthorized'}), 403
+
+    conn = get_db_connection()
+    try:
+        session = conn.execute(
+            'SELECT * FROM attendance_sessions WHERE session_id = ?', (session_id,)
+        ).fetchone()
+        if not session:
+            return jsonify({'success': False, 'error': 'Session not found'}), 404
+        if not can_manage_session(current_user, session):
+            return jsonify({'success': False, 'error': 'Unauthorized'}), 403
+
+        candidates = {
+            row['student_id']: row['confidence']
+            for row in conn.execute(
+                'SELECT student_id, confidence FROM session_candidates WHERE session_id = ?',
+                (session_id,)
+            ).fetchall()
+        }
+        saved = {
+            row['student_id']: row['status']
+            for row in conn.execute(
+                'SELECT student_id, status FROM attendance WHERE session_id = ?', (session_id,)
+            ).fetchall()
+        }
+        roster = [
+            {
+                'studentId': row['student_id'],
+                'name': row['name'],
+                'usn': row['usn'],
+                'detected': row['student_id'] in candidates,
+                'confidence': candidates.get(row['student_id']),
+                'savedStatus': saved.get(row['student_id']),
+            }
+            for row in get_roster(conn, session)
+        ]
+        return jsonify({
+            'success': True,
+            'session': session_to_json(session),
+            'rosterSize': len(roster),
+            'detectedCount': sum(1 for r in roster if r['detected']),
+            'students': roster,
+        })
+    finally:
+        conn.close()
+
+
+# ============================================================
+# ROSTER IMPORT (CSV FROM EXAM CELL) AND PARENT CONTACTS
+# ============================================================
+
+@app.route('/api/students/import', methods=['POST'])
+@token_required
+def import_students(current_user):
+    """
+    Upload a CSV with a header row. Columns (case-insensitive):
+    usn, name, department, semester, section, email, phone_number,
+    parent_name, parent_phone, parent_email, student_id (defaults to usn).
+    Existing students are updated; face embeddings are not touched.
+    """
+
+    if current_user['role'] not in ADMIN_ROLES:
+        return jsonify({'success': False, 'error': 'Unauthorized'}), 403
+
+    if 'file' not in request.files:
+        return jsonify({'success': False, 'error': 'Upload a CSV file in the "file" field'}), 400
+
+    try:
+        text = request.files['file'].read().decode('utf-8-sig')
+    except UnicodeDecodeError:
+        return jsonify({'success': False, 'error': 'CSV must be UTF-8 encoded'}), 400
+
+    reader = csv.DictReader(io.StringIO(text))
+    columns = ['name', 'usn', 'department', 'semester', 'section', 'email',
+               'phone_number', 'parent_name', 'parent_phone', 'parent_email']
+    inserted, updated, errors = 0, 0, []
+
+    conn = get_db_connection()
+    try:
+        for line_no, raw in enumerate(reader, start=2):
+            row = {(k or '').strip().lower(): (v or '').strip() for k, v in raw.items()}
+            student_id = row.get('student_id') or row.get('usn')
+            if not student_id or not row.get('name'):
+                errors.append(f'line {line_no}: usn/student_id and name are required')
+                continue
+            values = [row.get(col, '') for col in columns]
+            exists = conn.execute(
+                'SELECT 1 FROM students WHERE student_id = ?', (student_id,)
+            ).fetchone()
+            if exists:
+                conn.execute(
+                    f"UPDATE students SET {', '.join(c + ' = ?' for c in columns)} WHERE student_id = ?",
+                    values + [student_id]
+                )
+                updated += 1
+            else:
+                conn.execute(
+                    f"INSERT INTO students (student_id, {', '.join(columns)}) "
+                    f"VALUES ({', '.join('?' * (len(columns) + 1))})",
+                    [student_id] + values
+                )
+                inserted += 1
+        conn.commit()
+    except Exception:
+        conn.rollback()
+        app.logger.exception('Roster import failed')
+        return jsonify({'success': False, 'error': 'Import failed'}), 500
+    finally:
+        conn.close()
+
+    return jsonify({'success': True, 'inserted': inserted, 'updated': updated, 'errors': errors[:50]})
+
+
+@app.route('/api/students/<student_id>/parent', methods=['PUT'])
+@token_required
+def update_parent_contact(current_user, student_id):
+
+    if current_user['role'] not in ADMIN_ROLES:
+        return jsonify({'success': False, 'error': 'Unauthorized'}), 403
+
+    data = request.json or {}
+    conn = get_db_connection()
+    try:
+        cur = conn.execute(
+            '''
+            UPDATE students SET parent_name = ?, parent_phone = ?, parent_email = ?
+            WHERE student_id = ?
+            ''',
+            (str(data.get('parentName', '')).strip(), str(data.get('parentPhone', '')).strip(),
+             str(data.get('parentEmail', '')).strip(), student_id)
+        )
+        conn.commit()
+    finally:
+        conn.close()
+
+    if not cur.rowcount:
+        return jsonify({'success': False, 'error': 'Student not found'}), 404
+    return jsonify({'success': True, 'message': 'Parent contact updated'})
+
+
+# ============================================================
+# PARENT NOTIFICATIONS
+# ============================================================
+
+@app.route('/api/notifications/parents/status', methods=['GET'])
+@token_required
+def parent_notification_status(current_user):
+    return jsonify({'success': True, **parent_notifier.status()})
+
+
+@app.route('/api/notifications/parents/shortage', methods=['POST'])
+@token_required
+def send_shortage_alerts(current_user):
+    """Alert parents of every student below 85% in a subject (once per student, subject and week)."""
+
+    if current_user['role'] not in STAFF_ROLES:
+        return jsonify({'success': False, 'error': 'Unauthorized'}), 403
+
+    data = request.json or {}
+    year, week, _ = datetime.now().isocalendar()
+    results = parent_notifier.notify_shortages(
+        department=data.get('department'),
+        semester=data.get('semester'),
+        section=data.get('section'),
+        subject=data.get('subject'),
+        threshold=data.get('threshold'),
+        period_key=data.get('periodKey') or f'{year}-W{week:02d}',
+    )
+    return jsonify({
+        'success': True,
+        'sent': sum(1 for r in results if r['sent']),
+        'failed': sum(1 for r in results if not r['sent']),
+        'results': results,
+    })
+
+
+@app.route('/api/notifications/parents/absent/<int:session_id>', methods=['POST'])
+@token_required
+def resend_absent_alerts(current_user, session_id):
+    """Run absence alerts for a confirmed session now (already-sent parents are skipped)."""
+
+    if current_user['role'] not in STAFF_ROLES:
+        return jsonify({'success': False, 'error': 'Unauthorized'}), 403
+
+    results = parent_notifier.notify_absentees(session_id)
+    return jsonify({
+        'success': True,
+        'sent': sum(1 for r in results if r['sent']),
+        'failed': sum(1 for r in results if not r['sent']),
+        'results': results,
+    })
+
+
+@app.route('/api/notifications/parents/test', methods=['POST'])
+@token_required
+def test_parent_notification(current_user):
+
+    if current_user['role'] not in ADMIN_ROLES:
+        return jsonify({'success': False, 'error': 'Unauthorized'}), 403
+
+    data = request.json or {}
+    results = parent_notifier.send_test(phone=data.get('phone'), email=data.get('email'))
+    return jsonify({
+        'success': all(ok for ok, _ in results) if results else False,
+        'results': [{'sent': ok, 'error': err} for ok, err in results],
+        **parent_notifier.status(),
+    })
+
+
+@app.route('/api/notifications/parents', methods=['GET'])
+@token_required
+def list_parent_notifications(current_user):
+
+    if current_user['role'] not in STAFF_ROLES:
+        return jsonify({'success': False, 'error': 'Unauthorized'}), 403
+
+    query = 'SELECT * FROM parent_notifications WHERE 1 = 1'
+    params = []
+    if request.args.get('studentId'):
+        query += ' AND student_id = ?'
+        params.append(request.args['studentId'])
+    if request.args.get('kind'):
+        query += ' AND kind = ?'
+        params.append(request.args['kind'].upper())
+    query += ' ORDER BY notification_id DESC LIMIT 200'
+
+    conn = get_db_connection()
+    try:
+        rows = [dict(r) for r in conn.execute(query, params).fetchall()]
+    finally:
+        conn.close()
+    return jsonify({'success': True, 'count': len(rows), 'notifications': rows})
 
 # ============================================================
 # START SERVER

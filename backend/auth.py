@@ -4,18 +4,22 @@ from functools import wraps
 from flask import request, jsonify
 import os
 
-APP_ENV = os.environ.get('APP_ENV', 'development').lower()
+APP_ENV = (
+    os.environ.get('APP_ENV')
+    or os.environ.get('FLASK_ENV')
+    or 'development'
+).lower()
 JWT_SECRET = os.environ.get('JWT_SECRET')
-if not JWT_SECRET:
+if not JWT_SECRET or JWT_SECRET.startswith('super_secret_local_key'):
     if APP_ENV == 'production':
-        raise RuntimeError('JWT_SECRET must be configured in production')
+        raise RuntimeError('Set a strong JWT_SECRET (32+ random characters) in production')
     JWT_SECRET = 'local_dev_secret_key'
 
 def generate_token(username, role):
     payload = {
         'username': username,
         'role': role,
-        'exp': datetime.datetime.utcnow() + datetime.timedelta(hours=24)
+        'exp': datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(hours=24)
     }
     return jwt.encode(payload, JWT_SECRET, algorithm='HS256')
 

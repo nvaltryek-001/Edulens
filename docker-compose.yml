@@ -1,18 +1,16 @@
-version: '3.8'
-
 services:
   backend:
-    build: .
+    build: ./backend
+    restart: unless-stopped
     ports:
       - "5000:5000"
-    volumes:
-      - ./backend/dataset:/app/dataset
-      - ./backend/uploads:/app/uploads
-      - edulens_db:/app
+    env_file: .env
     environment:
-      - JWT_SECRET=${JWT_SECRET}
-      - FLASK_ENV=production
-      - FIREBASE_CREDENTIALS=${FIREBASE_CREDENTIALS:-backend/config/firebase-service-account.json}
+      - APP_ENV=production
+    volumes:
+      - edulens_data:/app/data          # database, embeddings, model cache
+      - ./backend/dataset:/app/dataset  # enrollment photos (biometric - keep private)
+      - ./backend/config:/app/config:ro # firebase-service-account.json, if used
 
 volumes:
-  edulens_db:
+  edulens_data:
