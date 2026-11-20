@@ -392,7 +392,7 @@ python app.py                                        # http://0.0.0.0:5000
 
 ### 2. First-time setup at SVIT
 
-1. **Convert the class sheet:** `pip install openpyxl && python tools/vtu_excel_to_roster.py VTU_Details_7th_sem.xlsx roster.csv --department CSD --semester 7 --section A`. It reads the USN, Name, Email and Mobile Number columns.
+1. **Convert the class sheet:** `pip install openpyxl && python tools/vtu_excel_to_roster.py VTU_Details_7th_sem.xlsx roster.csv --department CSD --semester 7 --sections "A:1-64,B:65-112"`. It reads the USN, Name, Email and Mobile Number columns and splits the class into sections by position in the list.
 2. **Portal → Students → Import roster** with that CSV (format: [`backend/sample_roster.csv`](backend/sample_roster.csv)). Add parent mobiles later in the same screen.
 3. **Portal → Students → Create student logins.** One click creates a login for every student (username = USN, or their `@saividya.ac.in` e-mail) and downloads the temporary passwords. Tick "E-mail each student" to send them automatically. Students change their password under **Password**.
 4. **Portal → Students → Create account** for each faculty member and HOD.
