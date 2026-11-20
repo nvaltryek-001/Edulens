@@ -1,6 +1,6 @@
-<h1 align="center">👁️ EduLens</h1>
+<h1 align="center">EduLens</h1>
 
-<p align="center"><b>Face-recognition attendance from a single classroom photo: an Android app for teachers and admins, and a Flask API that runs the recognition locally with no paid APIs.</b></p>
+<p align="center"><b>Face-recognition attendance for Sai Vidya Institute of Technology (SVIT), Bengaluru.<br/>One classroom photo, teacher-confirmed attendance, parent alerts and VTU 85% shortage tracking, all on a campus server.</b></p>
 
 <p align="center">
   <img src="https://img.shields.io/badge/Kotlin-7F52FF?style=flat-square&logo=kotlin&logoColor=white" alt="Kotlin" />
@@ -11,71 +11,102 @@
   <img src="https://img.shields.io/badge/SQLite-003B57?style=flat-square&logo=sqlite&logoColor=white" alt="SQLite" />
 </p>
 
+**Team:** Likhith M (1VA23CD044), Lekhana Jain R (1VA23CD043), Darshan H N (1VA23CD025), Nikesh (1VA23CD058)
+**Guide:** Prof. Pulukuri Aparna, Dept. of CSE (Data Science), SVIT. **YUKTI Innovation ID:** IR2026-1060038
+
 ## Problem
 
-Calling the roll takes minutes from every lecture and is easy to proxy. EduLens lets a teacher take **one photo of the class**; the system detects every face, identifies enrolled students and records attendance.
+Roll-call takes 5–10 minutes of every lecture, proxy attendance is easy, and students usually learn about a
+shortage only at semester end, when VTU's **85% per course** rule already bars them from the SEE.
+
+## Solution
+
+1. Faculty starts a session for subject + section and takes 1–4 classroom photos.
+2. The server detects every face (RetinaFace), creates a 512-d ArcFace embedding, and matches it **only against
+   that section's roster** (cosine ≥ 0.45 with a 0.03 margin over the second-best student).
+3. Matches are **candidates only**. The teacher reviews (check / uncheck / add by hand) and confirms.
+4. Confirmation writes Present **and Absent** for every roster student in one transaction and locks the session.
+5. Parents of absent students get an SMS/e-mail; weekly alerts go out for anyone below 85%.
+6. Students see subject-wise attendance, how many classes they can still miss, IA marks and deadlines.
 
 ## Features
 
-| Role | Capabilities |
+| Role | What they can do |
 |---|---|
-| **Administrator** | Register students (ID, USN, department, semester, section), enroll face images, retrain the model, view reports |
-| **Teacher** | Capture a classroom photo with CameraX, get recognised students back, review and sync attendance |
-| **Offline-first** | Room database on the device; records sync to the server through `/api/sync` |
-
-## How recognition works
-
-```mermaid
-flowchart LR
-  P[Classroom photo] --> Q[OpenCV quality check<br/>Laplacian blur filter]
-  Q --> D[InsightFace buffalo_l<br/>detect every face]
-  D --> E[512-d face embedding per face]
-  E --> M[Compare with enrolled embeddings<br/>similarity threshold 0.45]
-  M --> ID[Matched students → attendance session]
-```
+| **Administrator / HOD** | Create accounts, import the roster CSV (with parent contacts), enroll faces, view analytics and shortage lists, send shortage alerts |
+| **Faculty** | Start a session, capture photos, review and confirm, enter IA marks, post assignment deadlines |
+| **Student** | Subject-wise attendance %, classes they can miss / must attend to reach 85%, IA marks, upcoming deadlines |
+| **Parent** | SMS / e-mail on confirmed absence and when attendance drops below 85% |
 
 ## Architecture
 
 ```mermaid
 flowchart LR
-  A[Android app<br/>Kotlin · Compose · CameraX · Room · Retrofit] -- JWT REST --> B[Flask API<br/>backend/app.py]
-  B --> DB[(SQLite<br/>users · students · attendance · logs)]
-  B --> ML[ml_core.py · InsightFace]
+  A[Android app<br/>Kotlin · Compose · CameraX · Room] -- HTTPS + JWT --> N[Nginx]
+  N --> B[Flask REST API]
+  B --> ML[Recognition engine<br/>InsightFace buffalo_l · OpenCV]
+  B --> DB[(SQLite → PostgreSQL)]
+  B --> F[(Embeddings · photos)]
+  B --> P[Parent alerts<br/>SMS / e-mail]
 ```
 
-## API (summary)
+Everything runs on one college-owned server; no face data leaves campus.
+
+## API
 
 | Method | Route | Purpose |
 |---|---|---|
-| POST | `/login`, `/register` | JWT auth with administrator/teacher roles |
-| POST | `/api/students` | Create a student record |
-| POST | `/api/enroll` | Upload face images for a student |
-| POST | `/api/train` | Rebuild the enrolled-embedding gallery |
-| POST | `/api/recognize` | Recognise students in a classroom photo |
-| POST | `/api/sync` | Sync offline attendance records |
-| POST/GET | `/api/sessions/start`, `/api/sessions/end`, `/api/sessions` | Attendance sessions |
-| GET | `/api/attendance`, `/api/reports`, `/api/weekly-summary`, `/api/analytics` | Records and analytics |
-| GET | `/api/low-attendance`, `/api/notifications` | Low-attendance alerts |
+| POST | `/login` | JWT login (roles: administrator, hod, teacher/faculty, student) |
+| POST | `/api/users` | Admin creates faculty / HOD / student accounts |
+| POST | `/api/students`, `/api/students/import` | Add one student, or import a roster CSV (see `backend/sample_roster.csv`) |
+| PUT | `/api/students/<id>/parent` | Update parent name / phone / e-mail |
+| POST | `/api/enroll`, `/api/train` | Upload face photos (`parentPhone` optional), rebuild gallery |
+| POST | `/api/sessions/start` | Start a session (one per faculty / section at a time) |
+| POST | `/api/recognize` | Photo → **candidates** for the active session (call up to 4 times) |
+| GET | `/api/sessions/<id>/review` | Roster with detected flags and confidence for the review screen |
+| POST | `/api/attendance/confirm` (or `/api/sessions/end`) | Confirm `presentStudentIds`, write Present + Absent, lock, alert parents |
+| POST | `/api/sync` | Offline records (never overwrite a confirmed session) |
+| GET | `/api/attendance`, `/api/reports`, `/api/weekly-summary`, `/api/analytics`, `/api/low-attendance` | Records and analytics (default threshold 85%) |
+| GET | `/api/me/attendance`, `/api/me/marks`, `/api/me/assignments` | Student portal |
+| POST/GET | `/api/ia-marks`, `/api/assignments` | IA marks and assignment deadlines |
+| POST | `/api/notifications/parents/shortage` | Alert parents of students below 85% (once per student, subject, week) |
+| POST | `/api/notifications/parents/absent/<sessionId>` | Re-run absence alerts for a session |
+| POST | `/api/notifications/parents/test` | Send a test SMS / e-mail |
+| GET | `/api/notifications/parents` | Log of every parent message and its delivery status |
 
-Full request and response examples: [`api.md`](api.md). Older design notes: [`architecture.md`](architecture.md) (describes an earlier MediaPipe + RandomForest pipeline; the current code uses InsightFace).
-
-## Run locally
+## Run it
 
 ```bash
-# Backend
-cd backend
-pip install -r requirements.txt
-python create_first_admin.py
-python app.py
-
-# Android app
-# Open the project root in Android Studio, set the API base URL, then Run ▶
+cp .env.example .env              # set JWT_SECRET; PARENT_SMS_PROVIDER=log for a demo
+docker compose up -d --build      # API on http://<server-ip>:5000
+docker compose exec backend python create_first_admin.py
 ```
 
-Docker and database setup: [`deployment.md`](deployment.md).
+Without Docker: `cd backend && pip install -r requirements.txt && python create_first_admin.py && python app.py`.
+
+**Android app:** set `EDULENS_API_URL=http://<server-ip>:5000/` in `gradle.properties`, then build in Android Studio.
+
+**Tests:** `cd backend && python -m unittest discover tests -v` (face model is stubbed, runs in under a second).
+
+## Parent alerts
+
+Set `PARENT_SMS_PROVIDER` in `.env`:
+
+| Value | What happens |
+|---|---|
+| `log` | Message printed to the server log and stored; nothing sent (demo) |
+| `fast2sms` | Fast2SMS (`FAST2SMS_API_KEY`; route `q` works without DLT for testing) |
+| `msg91` | MSG91 Flow API (`MSG91_AUTH_KEY`, `MSG91_FLOW_ID`) |
+| `twilio` | Twilio (`TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_FROM_NUMBER`) |
+
+E-mail: `PARENT_EMAIL_ENABLED=true` plus `SMTP_*` (a college Gmail account with an App Password works).
+Production SMS in India needs a DLT-registered sender ID and templates; the two message templates are in
+`backend/services/parent_notifier.py`.
 
 ## Privacy and limitations
 
-- Face images and embeddings are **biometric data**. Store them only with consent, keep the server on a trusted network and delete data when a student leaves.
-- Recognition accuracy depends on photo resolution, pose and lighting, and has not been benchmarked on a public dataset. The 0.45 threshold trades misses against false matches; tune it per classroom.
-- Location/GPS-based attendance is **not** implemented.
+- Face images and embeddings are biometric personal data under India's DPDP Act, 2023. Collect written consent,
+  keep the server on the campus network, delete a student's data when they leave.
+- Recognition accuracy has not yet been benchmarked on full 60–70 student classes; the teacher review step
+  exists because the model will sometimes miss or mis-match faces.
+- No liveness check yet; a held-up photo could be detected. Planned.

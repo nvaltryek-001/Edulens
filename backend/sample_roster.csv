@@ -1,0 +1,4 @@
+usn,name,department,semester,section,email,phone_number,parent_name,parent_phone,parent_email
+1VA23CD901,Test Student One,CSD,7,A,test1@example.com,,Parent One,9000000001,parent1@example.com
+1VA23CD902,Test Student Two,CSD,7,A,test2@example.com,,Parent Two,9000000002,
+1VA23CD903,Test Student Three,CSD,7,A,test3@example.com,,Parent Three,9000000003,
