@@ -546,13 +546,20 @@
   };
 
   // ------------------------------------------------------------ alerts
+  function alertContext(key) {
+    const parts = String(key || '').split(':');
+    if (parts[0] === 'absent') return 'session #' + parts[1];
+    if (parts[0] === 'shortage') return parts[1] + (parts[2] ? ' · ' + parts[2] : '');
+    return '';
+  }
+
   async function loadAlerts() {
     const st = await api('/api/notifications/parents/status');
     $('alertStatus').textContent = `SMS provider: ${st.smsProvider}${st.smsProvider === 'log' ? ' (demo mode: messages are recorded, not sent)' : ''} · E-mail: ${st.emailEnabled ? 'on' : 'off'} · Minimum: ${st.minimumPercent}%`;
     const r = await api('/api/notifications/parents');
     $('alertBody').innerHTML = r.notifications.map(n => `
       <tr title="${esc(n.message)}"><td>${esc((n.created_at || '').slice(0, 16))}</td><td>${esc(n.student_id)}</td>
-      <td>${esc(n.kind)}</td><td class="hide-sm">${esc(n.channel)} ${esc(n.recipient)}</td>
+      <td>${esc(n.kind)} <span class="muted">· ${esc(alertContext(n.event_key))}</span></td><td class="hide-sm">${esc(n.channel)} ${esc(n.recipient)}</td>
       <td><span class="pill ${n.status === 'SENT' ? 'ok' : n.status === 'FAILED' ? 'bad' : 'muted'}">${esc(n.status)}</span></td></tr>`).join('')
       || '<tr><td colspan="5" class="muted">No parent alerts yet.</td></tr>';
   }

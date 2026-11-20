@@ -67,8 +67,10 @@ android {
 }
 
 secrets {
-  propertiesFileName = ".env"
-  defaultPropertiesFileName = ".env.example"
+  // Android-only values. Never point this at the server's .env: every key in the
+  // file is compiled into the APK, where anyone can read it.
+  propertiesFileName = "android.secrets.properties"
+  defaultPropertiesFileName = "android.secrets.defaults.properties"
 }
 
 googleServices { missingGoogleServicesStrategy = MissingGoogleServicesStrategy.WARN }
