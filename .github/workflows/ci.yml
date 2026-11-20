@@ -64,6 +64,8 @@ jobs:
       - name: Build
         run: |
           cp .env.example .env
+          [ -f debug.keystore ] || keytool -genkeypair -keystore debug.keystore -storepass android -keypass android \
+            -alias androiddebugkey -dname "CN=Android Debug,O=Android,C=US" -keyalg RSA -keysize 2048 -validity 10000
           chmod +x gradlew
           ./gradlew --no-daemon assembleDebug
       - uses: actions/upload-artifact@v4
